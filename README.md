@@ -3,11 +3,11 @@ Game Of Life
 
 Playing with various Game Of Life things in Unity using ECS.
 
-##Details
+## Details
 
 All versions are using the Light Weight Render Pipeline.
 
-#Version 1.0
+# Version 1.0
 
 Version 1.0 is the baseline implementation of Conway's Game Of Life.
 
