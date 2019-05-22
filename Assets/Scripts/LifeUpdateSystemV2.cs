@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEditor;
+
 using Unity.Jobs;
 using Unity.Entities;
 using Unity.Burst;
@@ -19,17 +20,15 @@ namespace GameOfLifeV2
         // A few config options
         private int NumberOfStartingSeeds = 12;
         private static int2 WorldSize = new int2 { x = 100, y = 100 };
-        private int2 CellsPerTile = new int2 { x = WorldSize.x / 5, y = WorldSize.y / 5 };
         private uint WorldSeed = 1851936439U;
         private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = false;
+        private bool LimitUpdateRate = true;
 
         [BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
         {
             [ReadOnly] public NativeArray<bool> cellState;
             [ReadOnly] public int2 gridSize;
-            [ReadOnly] public int2 cellsPerTile;
             [ReadOnly] public NativeArray<int2> offsetTable;
 
             public NativeArray<bool> newCellState;
@@ -100,13 +99,11 @@ namespace GameOfLifeV2
                 {
                     if(newCellState[idx])
                     {
-                        CommandBuffer.AddComponent(index, entity, new AliveCell { });
                         CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 1, c0.gridPosition.y) });
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.aliveRenderMesh);
                     }
                     else
                     {
-                        CommandBuffer.RemoveComponent(index, entity, typeof(AliveCell));
                         CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 0, c0.gridPosition.y) });
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.deadRenderMesh);
                     }
@@ -263,7 +260,6 @@ namespace GameOfLifeV2
                     if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
                         cellState[entityIndex] = true;
-                        EntityManager.AddComponentData(entities[entityIndex], new AliveCell { });
                         // The location is adjusted slightly because it looks nicer
                         EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
                         // And we flip the mesh to the alive render mesh
@@ -302,21 +298,6 @@ namespace GameOfLifeV2
                     EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
                     EntityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
                     EntityManager.SetSharedComponentData(cells[entityIdx], deadRenderMesh);
-                    /*
-                    EntityElement[] adjacency = new EntityElement[8] {
-                        new Entity{ Index = 1, Version = 1 } ,
-                        new Entity{ Index = 1, Version = 2 } ,
-                        new Entity{ Index = 1, Version = 3 } ,
-                        new Entity{ Index = 1, Version = 4 } ,
-                        new Entity{ Index = 1, Version = 5 } ,
-                        new Entity{ Index = 1, Version = 6 },
-                        new Entity{ Index = 1, Version = 7 },
-                        new Entity{ Index = 1, Version = 8 }
-                    };
-
-                    DynamicBuffer<EntityElement> entityBuffer = EntityManager.GetBuffer<EntityElement>(cells[entityIdx]);
-                    entityBuffer.CopyFrom(adjacency);
-                    */
                 }
             }
 
@@ -362,7 +343,6 @@ namespace GameOfLifeV2
             var updateCells = new CellLifeProcessing
             {
                 gridSize = WorldSize,
-                cellsPerTile = CellsPerTile,
                 cellState = stateSelection ? cellState0 : cellState1,
                 newCellState = stateSelection ? cellState1 : cellState0,
                 offsetTable = offsetTable
