@@ -9,7 +9,7 @@ using Unity.Transforms;
 
 using LifeComponents;
 
-namespace GameOfLife
+namespace GameOfLifeV1
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [DisableAutoCreation]

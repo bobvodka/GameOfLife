@@ -22,7 +22,7 @@ namespace GameOfLifeV2
         private int2 CellsPerTile = new int2 { x = WorldSize.x / 5, y = WorldSize.y / 5 };
         private uint WorldSeed = 1851936439U;
         private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = true;
+        private bool LimitUpdateRate = false;
 
         [BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
@@ -100,11 +100,13 @@ namespace GameOfLifeV2
                 {
                     if(newCellState[idx])
                     {
+                        CommandBuffer.AddComponent(index, entity, new AliveCell { });
                         CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 1, c0.gridPosition.y) });
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.aliveRenderMesh);
                     }
                     else
                     {
+                        CommandBuffer.RemoveComponent(index, entity, typeof(AliveCell));
                         CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 0, c0.gridPosition.y) });
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.deadRenderMesh);
                     }
@@ -261,6 +263,7 @@ namespace GameOfLifeV2
                     if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
                         cellState[entityIndex] = true;
+                        EntityManager.AddComponentData(entities[entityIndex], new AliveCell { });
                         // The location is adjusted slightly because it looks nicer
                         EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
                         // And we flip the mesh to the alive render mesh
@@ -299,6 +302,21 @@ namespace GameOfLifeV2
                     EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
                     EntityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
                     EntityManager.SetSharedComponentData(cells[entityIdx], deadRenderMesh);
+                    /*
+                    EntityElement[] adjacency = new EntityElement[8] {
+                        new Entity{ Index = 1, Version = 1 } ,
+                        new Entity{ Index = 1, Version = 2 } ,
+                        new Entity{ Index = 1, Version = 3 } ,
+                        new Entity{ Index = 1, Version = 4 } ,
+                        new Entity{ Index = 1, Version = 5 } ,
+                        new Entity{ Index = 1, Version = 6 },
+                        new Entity{ Index = 1, Version = 7 },
+                        new Entity{ Index = 1, Version = 8 }
+                    };
+
+                    DynamicBuffer<EntityElement> entityBuffer = EntityManager.GetBuffer<EntityElement>(cells[entityIdx]);
+                    entityBuffer.CopyFrom(adjacency);
+                    */
                 }
             }
 
@@ -322,6 +340,7 @@ namespace GameOfLifeV2
 
         float lastUpdateTime = 0.0f;
         bool stateSelection = true;
+        int frameCount = 0;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             if (LimitUpdateRate)
@@ -359,6 +378,28 @@ namespace GameOfLifeV2
 
             commandBufferSystem.AddJobHandleForProducer(renderupdate);
 
+            renderupdate.Complete();
+            int changedThisFrame = 0;
+            int aliveNow = 0;
+            int deadNow = 0;
+            for(int idx = 0; idx < tileCount; ++idx)
+            {
+                if (cellState0[idx] != cellState1[idx])
+                {
+                    changedThisFrame++;
+                    if(cellState0[idx] && !cellState1[idx])
+                    {
+                        deadNow++;
+                    }
+                    else
+                    {
+                        aliveNow++;
+                    }
+                }
+            }
+
+            Debug.Log($"On frame {frameCount} - {changedThisFrame} entities flipped state : new Alive {aliveNow} : new Dead {deadNow}");
+            frameCount++;
             stateSelection = !stateSelection;
 
             return renderupdate;
