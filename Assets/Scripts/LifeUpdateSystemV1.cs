@@ -185,8 +185,8 @@ namespace GameOfLifeV1
                 typeof(LocalToWorld)
                 );
 
-            // As we want the command buffer to run before any follow up systems a new one is created rather
-            // than using a built in system. (Not required for version 1 but I have plans, oh yes...)
+            // Grab a built in command buffer so that we can queue up updates for execution on the main thread
+            // at some point in the future (in this case, before the next time 'update' runs
             commandBufferSystem = World.Active.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
 
             // Setup the board and kick the simulation off
@@ -224,6 +224,8 @@ namespace GameOfLifeV1
         };
 
         int ConvertToEntityIndex(int x, int y, int2 gridSize) => x + (y * gridSize.x);
+        int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
+
         int ConvertToEntityIndex(int2 location, int2 gridSize, int2 offset) => (location.x + offset.x) + ((location.y + offset.y) * gridSize.x);
         bool IsInValidRange(int index, int2 gridSize)
         {
@@ -256,6 +258,15 @@ namespace GameOfLifeV1
             }
         }
 
+        int2 WrapLocation(int2 location, int2 gridSize)
+        {
+            return new int2
+            {
+                x = location.x < 0 ? gridSize.x - 1 : location.x == gridSize.x ? 0 : location.x,
+                y = location.y < 0 ? gridSize.y - 1 : location.y == gridSize.y ? 0 : location.y
+            };
+        }
+
         public void GenerateLifeSeed(int2 gridSize)
         {
             var lifeStart = GeneratePatternStamps(NumberOfStartingSeeds, gridSize, new int2[][]
@@ -280,8 +291,7 @@ namespace GameOfLifeV1
             for (int x = 0; x < gridSize.x; ++x)
             {
                 for (int y = 0; y < gridSize.y; ++y)
-                {
-                    int entityIdx = ConvertToEntityIndex(x, y, gridSize);
+                { 
                     int2 location = new int2(x, y);
 
                     EntityElement[] adjacency = new EntityElement[offsetTable.Length];
@@ -289,22 +299,23 @@ namespace GameOfLifeV1
                     for (int i = 0; i < offsetTable.Length; ++i)
                     {
                         int2 entityLocation = location + offsetTable[i];
-                        // wrap the cells if required
-                        entityLocation.x = entityLocation.x < 0 ? gridSize.x - 1 : entityLocation.x == gridSize.x ? 0 : entityLocation.x;
-                        entityLocation.y = entityLocation.y < 0 ? gridSize.y - 1 : entityLocation.y == gridSize.y ? 0 : entityLocation.y;
 
-                        int idx = entityLocation.x + (entityLocation.y * gridSize.y);
+                        entityLocation = WrapLocation(entityLocation, gridSize);
+
+                        int idx = ConvertToEntityIndex(entityLocation,gridSize);
 
                         adjacency[i] = cells[idx];
                     }
+
+                    int entityIdx = ConvertToEntityIndex(location, gridSize);
 
                     // Populate the entity information - all cells start off 'dead'
                     EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
                     EntityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
                     EntityManager.SetSharedComponentData(cells[entityIdx], deadRenderMesh);
 
-                    // As we can't hold an array in an entity the adjancy information is stored in a buffer attached to the entity
-                    // and populated by copying from the details we generated
+                    // As we can't hold an array of Entity references in a component the adjancy information is stored in a 
+                    // buffer attached to the entity and populated by copying from the details we generated
                     DynamicBuffer<EntityElement> entityBuffer = EntityManager.GetBuffer<EntityElement>(cells[entityIdx]);
                     entityBuffer.CopyFrom(adjacency);
                 }
