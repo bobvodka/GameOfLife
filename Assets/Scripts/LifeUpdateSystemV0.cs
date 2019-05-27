@@ -12,7 +12,7 @@ using LifeComponents;
 namespace GameOfLifeV0
 {
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     public class LifeUpdateSystem : ComponentSystem
     {
         // A few config options

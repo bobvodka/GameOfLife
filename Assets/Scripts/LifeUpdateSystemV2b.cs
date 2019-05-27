@@ -22,10 +22,10 @@ namespace GameOfLifeV2b
         private int NumberOfStartingSeeds = 12;
         private static int2 WorldSize = new int2 { x = 100, y = 100 };
         private static int bitsPerCells = 32;
-        private static int2 GridSize = new int2 { x = (int)math.ceil(WorldSize.x / bitsPerCells), y = WorldSize.y}; 
+        private static int2 GridSize = new int2 { x = (int)math.ceil((float)WorldSize.x / (float)bitsPerCells), y = WorldSize.y}; 
         private uint WorldSeed = 1851936439U;
         private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = true;
+        private bool LimitUpdateRate = false;
 
         //[BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
@@ -37,7 +37,7 @@ namespace GameOfLifeV2b
 
             public NativeArray<uint> newCellState;
 
-            int ConvertToIndex(int2 location) => location.x + (location.y * gridSizeInTiles.x);
+            int ConvertToTileIndex(int2 location) => (location.x / cellsPerTile) + (location.y * gridSizeInTiles.x);
 
             // Location inside the 2d tiled grid
             int2 GetGlobalLocation(int index)
@@ -45,8 +45,8 @@ namespace GameOfLifeV2b
 
                 return new int2
                 {
-                    x = index - gridSizeInTiles.x,
-                    y = index > 0 ? gridSizeInTiles.x % index : 0
+                    x = index / cellsPerTile,
+                    y = index / gridSize.x
                 };
 
             }
@@ -62,13 +62,13 @@ namespace GameOfLifeV2b
 
             int GetValidBitCount(int2 location)
             {
-                return gridSize.x - (location.x * cellsPerTile);
+                return math.min(cellsPerTile, (gridSize.x - (location.x * cellsPerTile)));
             }
 
             uint LoadLineAtOffset(int2 location, int2 offset)
             {
                 var lineLocation = WrapLocation(location + offset);
-                var idx = ConvertToIndex(lineLocation);
+                var idx = ConvertToTileIndex(lineLocation);
 
                 return cellState[idx];
             }
@@ -217,6 +217,8 @@ namespace GameOfLifeV2b
                 return gridSizeInTiles.x * location.y + x;
             }
 
+            int ConvertToTileIndex(int2 location) => (location.x / cellsPerTile) + (location.y * gridSizeInTiles.x);
+
             int GetBitForCell(int2 location)
             {
                 return location.x % cellsPerTile;
@@ -230,7 +232,7 @@ namespace GameOfLifeV2b
                 // to get the correct index in to the correct bit which represents the cell state 
                 // in the grid
 
-                int idx = ConvertToIndex(c0.gridPosition);
+                int idx = ConvertToTileIndex(c0.gridPosition);
 
                 // Load in the cells
                 var oldState = oldCellState[idx];
@@ -388,10 +390,12 @@ namespace GameOfLifeV2b
 
         int ConvertToIndex(int2 location) => location.x + (location.y * GridSize.x);
 
+        int ConvertToTileIndex(int2 location) => (location.x / bitsPerCells) + (location.y * GridSize.x);
+
         void SetAliveAtLocation(NativeArray<uint> cells, int2 location, int2 offset)
         {
             var lineLocation = location + offset;
-            var idx = ConvertToIndex(lineLocation);
+            var idx = ConvertToTileIndex(lineLocation);
 
             var cellState = cells[idx];
 
@@ -468,7 +472,8 @@ namespace GameOfLifeV2b
         float lastUpdateTime = 0.0f;
         bool stateSelection = true;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
-        {
+        { 
+
             if (LimitUpdateRate)
             {
                 // Some update speed limiting to make the simulation look a bit nicer for humans
@@ -490,6 +495,7 @@ namespace GameOfLifeV2b
                 gridSizeInTiles = GridSize,
                 cellState = stateSelection ? cellState0 : cellState1,
                 newCellState = stateSelection ? cellState1 : cellState0,
+                cellsPerTile = bitsPerCells
             }.Schedule(tileCount, 1, inputDeps);
 
             var renderupdate = new CellRenderingUpdate
