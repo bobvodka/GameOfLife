@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 
 using Unity.Jobs;
@@ -246,12 +246,7 @@ namespace GameOfLifeV2
         };
 
         int ConvertToEntityIndex(int x, int y, int2 gridSize) => x + (y * gridSize.x);
-        int ConvertToEntityIndex(int2 location, int2 gridSize, int2 offset) => (location.x + offset.x) + ((location.y + offset.y) * gridSize.x);
-        bool IsInValidRange(int index, int2 gridSize)
-        {
-            int maxValue = gridSize.x * gridSize.y;
-            return index < maxValue;
-        }
+        int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
 
         // Stamp out some starting patterns to the board flipping cells from 'dead' to 'alive' as required
         void SetupBoardCondition(NativeArray<Entity> entities, NativeArray<bool> cellState, int2 gridSize, StartPatternStamp[] lifeStartPoints)
@@ -263,13 +258,14 @@ namespace GameOfLifeV2
 
                 for (int idx = 0; idx < pattern.Length; ++idx)
                 {
-                    var location = pattern[idx];
-                    int entityIndex = ConvertToEntityIndex(location, gridSize, offset);
-                    if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
+                    var location = pattern[idx] + offset;
+                    
+                    if (math.all(location < gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
+                        int entityIndex = ConvertToEntityIndex(location, gridSize);
                         cellState[entityIndex] = true;
                         // The location is adjusted slightly because it looks nicer
-                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x + offset.x, 1, location.y + offset.y) });
+                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
                         // And we flip the mesh to the alive render mesh
                         EntityManager.SetSharedComponentData(entities[entityIndex], aliveRenderMesh);
                     }
