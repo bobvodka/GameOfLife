@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 using Unity.Jobs;
@@ -250,7 +250,7 @@ namespace GameOfLifeV1
                         // This the logic that makes the cells 'alive' by simply adding a tag component
                         EntityManager.AddComponent(entities[entityIndex], typeof(AliveCell));
                         // The location is adjusted slightly because it looks nicer
-                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
+                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x + offset.x, 1, location.y + offset.y) });
                         // And we flip the mesh to the alive render mesh
                         EntityManager.SetSharedComponentData(entities[entityIndex], aliveRenderMesh);
                     }
