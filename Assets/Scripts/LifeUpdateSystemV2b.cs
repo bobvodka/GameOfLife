@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 
 using Unity.Jobs;
@@ -19,13 +19,13 @@ namespace GameOfLifeV2b
     public class LifeUpdateSystem : JobComponentSystem
     {
         // A few config options
-        private int NumberOfStartingSeeds = 12;
-        private static int2 WorldSize = new int2 { x = 100, y = 100 };
-        private static int bitsPerCells = 32;
-        private static int2 GridSize = new int2 { x = (int)math.ceil((float)WorldSize.x / (float)bitsPerCells), y = WorldSize.y}; 
+        private int NumberOfStartingSeeds = 2;
+        private static int2 WorldSize = new int2 { x = 64, y = 50 };
+        private static int maxCellsPerTile = 32;
+        private static int2 GridSizeInTiles = new int2 { x = (int)math.ceil((float)WorldSize.x / (float)maxCellsPerTile), y = WorldSize.y}; 
         private uint WorldSeed = 1851936439U;
-        private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = false;
+        private float WorldUpdateRate = 2.1f;
+        private bool LimitUpdateRate = true;
 
         //[BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
@@ -33,20 +33,20 @@ namespace GameOfLifeV2b
             [ReadOnly] public NativeArray<uint> cellState;
             [ReadOnly] public int2 gridSize;
             [ReadOnly] public int2 gridSizeInTiles;
-            [ReadOnly] public int cellsPerTile;
+            [ReadOnly] public int maxCellsPerTile;
 
             public NativeArray<uint> newCellState;
 
-            int ConvertToTileIndex(int2 location) => (location.x / cellsPerTile) + (location.y * gridSizeInTiles.x);
+            int ConvertToTileIndex(int2 location) => (location.x / maxCellsPerTile) + (location.y * gridSizeInTiles.x);
 
             // Location inside the 2d tiled grid
-            int2 GetGlobalLocation(int index)
+            int2 GetGlobalTileLocation(int index)
             {
 
                 return new int2
                 {
-                    x = index / cellsPerTile,
-                    y = index / gridSize.x
+                    x = index % gridSizeInTiles.x,
+                    y = index / gridSizeInTiles.x
                 };
 
             }
@@ -62,7 +62,7 @@ namespace GameOfLifeV2b
 
             int GetValidBitCount(int2 location)
             {
-                return math.min(cellsPerTile, (gridSize.x - (location.x * cellsPerTile)));
+                return math.min(maxCellsPerTile, gridSize.x - (location.x * maxCellsPerTile));
             }
 
             uint LoadLineAtOffset(int2 location, int2 offset)
@@ -80,6 +80,10 @@ namespace GameOfLifeV2b
                     if (aliveCount == 2 || aliveCount == 3)
                     {
                         rowOut |= 1u << idx;
+                    }
+                    else
+                    {
+                        rowOut &= ~(1u << idx);
                     }
                 }
                 else
@@ -99,9 +103,9 @@ namespace GameOfLifeV2b
 
                 for (int idx = 1; idx < validBits - 1; idx++)
                 {
-                    var rowAlive = cells & adjMask;
-                    var rowAboveAlive = cellsAbove & rowMask;
-                    var rowBelowAlive = cellsBelow & rowMask;
+                    var rowAlive = cells & (adjMask << (idx - 1));
+                    var rowAboveAlive = cellsAbove & (rowMask << (idx - 1));
+                    var rowBelowAlive = cellsBelow & (rowMask << (idx - 1));
 
                     var aliveCount = math.countbits(rowAlive) + math.countbits(rowAboveAlive) 
                         + math.countbits(rowBelowAlive);
@@ -110,7 +114,7 @@ namespace GameOfLifeV2b
                 }
             }
 
-            void ProcessEdge(ref uint rowOut, int2 location, uint cells, uint cellsAbove, uint cellsBelow, uint edgeMask, uint rowMask, uint adjMask, int2[] locations)
+            void ProcessEdge(ref uint rowOut, int2 location, int cellIdx, uint cells, uint cellsAbove, uint cellsBelow, uint edgeMask, uint rowMask, uint adjMask, int2[] locations)
             {
                 uint edge = 0;
 
@@ -132,14 +136,15 @@ namespace GameOfLifeV2b
                 aliveCount += math.countbits(cellsAbove & rowMask) + math.countbits(cellsBelow & rowMask);
                 aliveCount += math.countbits(cells & adjMask);
 
-                CellOutUpdate(ref rowOut, cells, 0, aliveCount);
+                CellOutUpdate(ref rowOut, cells, cellIdx, aliveCount);
             }
 
             void ProcessLeftEdge(ref uint rowOut, int2 location, uint cells, uint cellsAbove, uint cellsBelow)
             {
+                var leftShiftAmount = GetValidBitCount(WrapLocation(location + new int2 { x = -1, y = 0 })) - 1;
 
                 // We need to load the left edge values and then only mask the high bit for each one
-                var edgeMask = 0x80000000u;
+                var edgeMask = 1u << leftShiftAmount;
 
                 int2[] locations = new int2[]
                 {
@@ -152,7 +157,7 @@ namespace GameOfLifeV2b
                 var rowMask = 0x3u;
                 var adjMask = 0x2u;
 
-                ProcessEdge(ref rowOut, location, cells, cellsAbove, cellsBelow, edgeMask, rowMask, adjMask, locations);
+                ProcessEdge(ref rowOut, location, 0, cells, cellsAbove, cellsBelow, edgeMask, rowMask, adjMask, locations);
 
             }
 
@@ -168,10 +173,12 @@ namespace GameOfLifeV2b
                     new int2 { x = 1, y = -1 }
                 };
 
+                var leftShiftAmount = GetValidBitCount(WrapLocation(location + new int2 { x = 1, y = 0 })) - 2;
+
                 // These ensure we only load the high bits for the rows above and below us and the cell to the left
-                var rowMask = 0xC0000000u;
-                var adjMask = 0x40000000u;
-                ProcessEdge(ref rowOut, location, cells, cellsAbove, cellsBelow, edgeMask, rowMask, adjMask, locations);
+                var rowMask = 3u << leftShiftAmount; 
+                var adjMask = 1u << leftShiftAmount;
+                ProcessEdge(ref rowOut, location, leftShiftAmount + 1, cells, cellsAbove, cellsBelow, edgeMask, rowMask, adjMask, locations);
             }
 
             public void Execute(int index)
@@ -182,11 +189,11 @@ namespace GameOfLifeV2b
 
                 // Next we need to load the lines around us
                 // For that we need our 2d tile location
-                var location = GetGlobalLocation(index);
+                var location = GetGlobalTileLocation(index);
 
                 // Then we can load the easy values (above and below)
                 var cellsAbove = LoadLineAtOffset(location, new int2 { x = 0, y = -1 });
-                var cellsBelow = LoadLineAtOffset(location, new int2 { x = 0, y = 1  });
+                var cellsBelow = LoadLineAtOffset(location, new int2 { x = 0, y =  1 });
 
 
                 uint rowOut = 0;
@@ -209,19 +216,19 @@ namespace GameOfLifeV2b
             [ReadOnly] public NativeArray<uint> oldCellState;
             [ReadOnly] public NativeArray<uint> newCellState;
             [ReadOnly] public int2 gridSizeInTiles;
-            [ReadOnly] public int cellsPerTile;
+            [ReadOnly] public int maxCellsPerTile;
 
             int ConvertToIndex(int2 location)
             {
-                var x = location.x % cellsPerTile;
+                var x = location.x % maxCellsPerTile;
                 return gridSizeInTiles.x * location.y + x;
             }
 
-            int ConvertToTileIndex(int2 location) => (location.x / cellsPerTile) + (location.y * gridSizeInTiles.x);
+            int ConvertToTileIndex(int2 location) => (location.x / maxCellsPerTile) + (location.y * gridSizeInTiles.x);
 
             int GetBitForCell(int2 location)
             {
-                return location.x % cellsPerTile;
+                return location.x % maxCellsPerTile;
             }
 
             public EntityCommandBuffer.Concurrent CommandBuffer;
@@ -238,7 +245,7 @@ namespace GameOfLifeV2b
                 var oldState = oldCellState[idx];
                 var newState = newCellState[idx];
 
-                var mask = GetBitForCell(c0.gridPosition);
+                var mask = 1 << GetBitForCell(c0.gridPosition);
 
                 if ((oldState & mask) != (newState & mask))
                 {
@@ -380,26 +387,24 @@ namespace GameOfLifeV2b
             new int2(0, 2),new int2(1, 2), new int2(4, 2),new int2(5, 2), new int2(6, 2),
         };
 
+        int2[] line = new int2[]
+        {
+            new int2(0, 0), new int2(2, 0), new int2(4, 0), new int2(6, 0), new int2(8, 0), new int2(9, 0)
+        };
+
         int ConvertToEntityIndex(int x, int y, int2 gridSize) => x + (y * gridSize.x);
-        int ConvertToEntityIndex(int2 location, int2 gridSize, int2 offset) => (location.x + offset.x) + ((location.y + offset.y) * gridSize.x);
-        bool IsInValidRange(int index, int2 gridSize)
+        int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x  + (location.y * gridSize.x);
+
+
+        int ConvertToTileIndex(int2 location) => (location.x / maxCellsPerTile) + (location.y * GridSizeInTiles.x);
+
+        void SetAliveAtLocation(NativeArray<uint> cells, int2 location)
         {
-            int maxValue = gridSize.x * gridSize.y;
-            return index < maxValue;
-        }
-
-        int ConvertToIndex(int2 location) => location.x + (location.y * GridSize.x);
-
-        int ConvertToTileIndex(int2 location) => (location.x / bitsPerCells) + (location.y * GridSize.x);
-
-        void SetAliveAtLocation(NativeArray<uint> cells, int2 location, int2 offset)
-        {
-            var lineLocation = location + offset;
-            var idx = ConvertToTileIndex(lineLocation);
+            var idx = ConvertToTileIndex(location);
 
             var cellState = cells[idx];
 
-            int bitIdx = location.x % bitsPerCells;
+            int bitIdx = location.x % maxCellsPerTile;
             cellState |= 1u << bitIdx;
 
             cells[idx] = cellState;
@@ -415,13 +420,15 @@ namespace GameOfLifeV2b
 
                 for (int idx = 0; idx < pattern.Length; ++idx)
                 {
-                    var location = pattern[idx];
-                    int entityIndex = ConvertToEntityIndex(location, gridSize, offset);
-                    if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
+                    var location = pattern[idx] + offset;
+                    
+                    if (math.all(location < gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
-                        SetAliveAtLocation(cellState, location, offset);
+                        int entityIndex = ConvertToEntityIndex(location, gridSize);
+
+                        SetAliveAtLocation(cellState, location);
                         // The location is adjusted slightly because it looks nicer
-                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x + offset.x, 1, location.y + offset.y) });
+                        EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
                         // And we flip the mesh to the alive render mesh
                         EntityManager.SetSharedComponentData(entities[entityIndex], aliveRenderMesh);
                     }
@@ -469,11 +476,11 @@ namespace GameOfLifeV2b
         NativeArray<uint> cellState0;
         NativeArray<uint> cellState1;
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 5.0f;
         bool stateSelection = true;
+        bool shouldUpdate = true;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
-        { 
-
+        {
             if (LimitUpdateRate)
             {
                 // Some update speed limiting to make the simulation look a bit nicer for humans
@@ -484,27 +491,38 @@ namespace GameOfLifeV2b
                 lastUpdateTime = WorldUpdateRate;
             }
 
+            /*if (!shouldUpdate)
+                return inputDeps;
+                */
+            shouldUpdate = false;
+
             // We need a command buffer to update the entities from inside a job
             var updateCommandBuffer = commandBufferSystem.CreateCommandBuffer();
 
-            var tileCount = GridSize.x * GridSize.y;
+            var tileCount = GridSizeInTiles.x * GridSizeInTiles.y;
 
             var updateCells = new CellLifeProcessing
             {
                 gridSize = WorldSize,
-                gridSizeInTiles = GridSize,
+                gridSizeInTiles = GridSizeInTiles,
                 cellState = stateSelection ? cellState0 : cellState1,
                 newCellState = stateSelection ? cellState1 : cellState0,
-                cellsPerTile = bitsPerCells
-            }.Schedule(tileCount, 1, inputDeps);
+                maxCellsPerTile = maxCellsPerTile
+            };//.Schedule(tileCount, 1, inputDeps);
+            
+            for(int idx = 0; idx < tileCount; ++idx)
+            {
+                updateCells.Execute(idx);
+            }
 
             var renderupdate = new CellRenderingUpdate
             {
                 CommandBuffer = updateCommandBuffer.ToConcurrent(),
                 newCellState = stateSelection ? cellState1 : cellState0,
                 oldCellState = stateSelection ? cellState0 : cellState1,
-                cellsPerTile = bitsPerCells
-            }.Schedule(this, updateCells);
+                maxCellsPerTile = maxCellsPerTile,
+                gridSizeInTiles = GridSizeInTiles
+            }.Schedule(this, inputDeps);
 
             commandBufferSystem.AddJobHandleForProducer(renderupdate);
             stateSelection = !stateSelection;
