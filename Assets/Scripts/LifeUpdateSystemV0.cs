@@ -206,7 +206,7 @@ namespace GameOfLifeV0
 
                         entityLocation = WrapLocation(entityLocation, gridSize);
 
-                        int idx = entityLocation.x + (entityLocation.y * gridSize.y);
+                        int idx = ConvertToEntityIndex(entityLocation, gridSize);
 
                         adjacency[i] = cells[idx];
                     }
@@ -230,10 +230,9 @@ namespace GameOfLifeV0
             cells.Dispose();
         }
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 0.1f;
         protected override void OnUpdate()
         {
-
             if (LimitUpdateRate)
             {
                 // Some update speed limiting to make the simulation look a bit nicer for humans
