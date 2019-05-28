@@ -322,7 +322,7 @@ namespace GameOfLifeV2
         NativeArray<bool> cellState1;
         NativeArray<int2> offsetTable;
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 0.1f;
         bool stateSelection = true;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {

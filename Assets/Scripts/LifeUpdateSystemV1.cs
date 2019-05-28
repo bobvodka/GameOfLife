@@ -318,7 +318,7 @@ namespace GameOfLifeV1
             cells.Dispose();
         }
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 0.1f;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             if (LimitUpdateRate)
