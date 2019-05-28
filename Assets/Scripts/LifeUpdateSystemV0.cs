@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEditor;
 
 using Unity.Entities;
@@ -134,13 +134,7 @@ namespace GameOfLifeV0
             new int2(0, 2),new int2(1, 2),                  new int2(4, 2),new int2(5, 2), new int2(6, 2),
         };
 
-        int ConvertToEntityIndex(int x, int y, int2 gridSize) => x + (y * gridSize.x);
-        int ConvertToEntityIndex(int2 location, int2 gridSize, int2 offset) => (location.x + offset.x) + ((location.y + offset.y) * gridSize.x);
-        bool IsInValidRange(int index, int2 gridSize)
-        {
-            int maxValue = gridSize.x * gridSize.y;
-            return index < maxValue;
-        }
+        int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
 
         // Stamp out some starting patterns to the board flipping cells from 'dead' to 'alive' as required
         void SetupBoardCondition(NativeArray<Entity> entities, int2 gridSize, StartPatternStamp[] lifeStartPoints)
@@ -152,10 +146,11 @@ namespace GameOfLifeV0
 
                 for (int idx = 0; idx < pattern.Length; ++idx)
                 {
-                    var location = pattern[idx];
-                    int entityIndex = ConvertToEntityIndex(location, gridSize, offset);
-                    if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
+                    var location = pattern[idx] + offset;
+                    
+                    if (math.all(location < gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
+                        int entityIndex = ConvertToEntityIndex(location, gridSize);
                         // This the logic that makes the cells 'alive' by simply adding a tag component
                         EntityManager.AddComponent(entities[entityIndex], typeof(AliveCell));
                         // The location is adjusted slightly because it looks nicer
@@ -167,11 +162,20 @@ namespace GameOfLifeV0
             }
         }
 
+        int2 WrapLocation(int2 location, int2 gridSize)
+        {
+            return new int2
+            {
+                x = location.x < 0 ? gridSize.x - 1 : location.x == gridSize.x ? 0 : location.x,
+                y = location.y < 0 ? gridSize.y - 1 : location.y == gridSize.y ? 0 : location.y
+            };
+        }
+
         public void GenerateLifeSeed(int2 gridSize)
         {
             var lifeStart = GeneratePatternStamps(NumberOfStartingSeeds, gridSize, new int2[][]
             {
-            gliderTable, lightweightspaceShip, pentomino, acorn
+                gliderTable, lightweightspaceShip, pentomino, acorn
             });
 
             // Generate the entities in one batch
@@ -191,8 +195,7 @@ namespace GameOfLifeV0
             for (int x = 0; x < gridSize.x; ++x)
             {
                 for (int y = 0; y < gridSize.y; ++y)
-                {
-                    int entityIdx = ConvertToEntityIndex(x, y, gridSize);
+                { 
                     int2 location = new int2(x, y);
 
                     EntityElement[] adjacency = new EntityElement[offsetTable.Length];
@@ -200,22 +203,23 @@ namespace GameOfLifeV0
                     for (int i = 0; i < offsetTable.Length; ++i)
                     {
                         int2 entityLocation = location + offsetTable[i];
-                        // wrap the cells if required
-                        entityLocation.x = entityLocation.x < 0 ? gridSize.x - 1 : entityLocation.x == gridSize.x ? 0 : entityLocation.x;
-                        entityLocation.y = entityLocation.y < 0 ? gridSize.y - 1 : entityLocation.y == gridSize.y ? 0 : entityLocation.y;
 
-                        int idx = entityLocation.x + (entityLocation.y * gridSize.y);
+                        entityLocation = WrapLocation(entityLocation, gridSize);
+
+                        int idx = ConvertToEntityIndex(entityLocation, gridSize);
 
                         adjacency[i] = cells[idx];
                     }
+
+                    int entityIdx = ConvertToEntityIndex(location, gridSize);
 
                     // Populate the entity information - all cells start off 'dead'
                     EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
                     EntityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
                     EntityManager.SetSharedComponentData(cells[entityIdx], deadRenderMesh);
 
-                    // As we can't hold an array in an entity the adjancy information is stored in a buffer attached to the entity
-                    // and populated by copying from the details we generated
+                    // As we can't hold an array of Entity references in a component the adjancy information is stored in a 
+                    // buffer attached to the entity and populated by copying from the details we generated
                     DynamicBuffer<EntityElement> entityBuffer = EntityManager.GetBuffer<EntityElement>(cells[entityIdx]);
                     entityBuffer.CopyFrom(adjacency);
                 }
@@ -226,10 +230,9 @@ namespace GameOfLifeV0
             cells.Dispose();
         }
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 0.1f;
         protected override void OnUpdate()
         {
-
             if (LimitUpdateRate)
             {
                 // Some update speed limiting to make the simulation look a bit nicer for humans

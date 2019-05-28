@@ -15,6 +15,7 @@ namespace GameOfLifeV2
 {
     
     [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [DisableAutoCreation]
     public class LifeUpdateSystem : JobComponentSystem
     {
         // A few config options
@@ -33,7 +34,7 @@ namespace GameOfLifeV2
 
             public NativeArray<bool> newCellState;
 
-            int ConvertToIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
+            int ConvertToIndex(int2 location) => location.x + (location.y * gridSize.x);
 
             int2 GetGlobalLocation(int index)
             {
@@ -45,6 +46,15 @@ namespace GameOfLifeV2
 
             }
 
+            int2 WrapLocation(int2 location)
+            {
+                return new int2
+                {
+                    x = location.x < 0 ? gridSize.x - 1 : location.x == gridSize.x ? 0 : location.x,
+                    y = location.y < 0 ? gridSize.y - 1 : location.y == gridSize.y ? 0 : location.y
+                };
+            }
+
             public void Execute(int index)
             {
                 // Flip the flat index back to a 2d location
@@ -54,11 +64,10 @@ namespace GameOfLifeV2
                 for (int i = 0; i < offsetTable.Length; ++i)
                 {
                     int2 entityLocation = location + offsetTable[i];
-                    // wrap the cells if required
-                    entityLocation.x = entityLocation.x < 0 ? gridSize.x - 1 : entityLocation.x == gridSize.x ? 0 : entityLocation.x;
-                    entityLocation.y = entityLocation.y < 0 ? gridSize.y - 1 : entityLocation.y == gridSize.y ? 0 : entityLocation.y;
+
+                    entityLocation = WrapLocation(entityLocation);
                                                        
-                    var idx = ConvertToIndex(entityLocation, gridSize);
+                    var idx = ConvertToIndex(entityLocation);
                     if(cellState[idx])
                     {
                         aliveCount++;
@@ -90,7 +99,7 @@ namespace GameOfLifeV2
             public EntityCommandBuffer.Concurrent CommandBuffer;
             public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0)
             {
-                // Because entities can move around we can't use the 'index' to look
+                // Because entities can move around in chunks we can't use the 'index' to look
                 // up their details, instead we need to use their grid position
                 // to get the correct index in to the cell state grid
                 int idx = ConvertToIndex(c0.gridPosition);
@@ -184,14 +193,13 @@ namespace GameOfLifeV2
 
             defaultArcheType = EntityManager.CreateArchetype(
                 typeof(LifeCell),
-                typeof(EntityElement),
                 typeof(Translation),
                 typeof(RenderMesh),
                 typeof(LocalToWorld)
                 );
 
-            // As we want the command buffer to run before any follow up systems a new one is created rather
-            // than using a built in system. (Not required for version 1 but I have plans, oh yes...)
+            // Grab a built in command buffer so that we can queue up updates for execution on the main thread
+            // at some point in the future (in this case, before the next time 'update' runs
             commandBufferSystem = World.Active.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
 
             // Setup the board and kick the simulation off
@@ -238,12 +246,7 @@ namespace GameOfLifeV2
         };
 
         int ConvertToEntityIndex(int x, int y, int2 gridSize) => x + (y * gridSize.x);
-        int ConvertToEntityIndex(int2 location, int2 gridSize, int2 offset) => (location.x + offset.x) + ((location.y + offset.y) * gridSize.x);
-        bool IsInValidRange(int index, int2 gridSize)
-        {
-            int maxValue = gridSize.x * gridSize.y;
-            return index < maxValue;
-        }
+        int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
 
         // Stamp out some starting patterns to the board flipping cells from 'dead' to 'alive' as required
         void SetupBoardCondition(NativeArray<Entity> entities, NativeArray<bool> cellState, int2 gridSize, StartPatternStamp[] lifeStartPoints)
@@ -255,10 +258,11 @@ namespace GameOfLifeV2
 
                 for (int idx = 0; idx < pattern.Length; ++idx)
                 {
-                    var location = pattern[idx];
-                    int entityIndex = ConvertToEntityIndex(location, gridSize, offset);
-                    if (IsInValidRange(entityIndex, gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
+                    var location = pattern[idx] + offset;
+                    
+                    if (math.all(location < gridSize))      // unlike the cells in the world for updates we aren't going to wrap here, so we just make sure we are in range
                     {
+                        int entityIndex = ConvertToEntityIndex(location, gridSize);
                         cellState[entityIndex] = true;
                         // The location is adjusted slightly because it looks nicer
                         EntityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
@@ -291,11 +295,10 @@ namespace GameOfLifeV2
                 for (int y = 0; y < gridSize.y; ++y)
                 {
                     int entityIdx = ConvertToEntityIndex(x, y, gridSize);
-                    int2 location = new int2(x, y);
 
                     // Populate the entity information - all cells start off 'dead'
                     cellState0[entityIdx] = false;
-                    EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
+                    EntityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = new int2(x, y) } );
                     EntityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
                     EntityManager.SetSharedComponentData(cells[entityIdx], deadRenderMesh);
                 }
@@ -319,9 +322,8 @@ namespace GameOfLifeV2
         NativeArray<bool> cellState1;
         NativeArray<int2> offsetTable;
 
-        float lastUpdateTime = 0.0f;
+        float lastUpdateTime = 0.1f;
         bool stateSelection = true;
-        int frameCount = 0;
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             if (LimitUpdateRate)
@@ -334,8 +336,8 @@ namespace GameOfLifeV2
                 lastUpdateTime = WorldUpdateRate;
             }
 
-            // Two command buffers so that we can queue command from both alive and dead
-            // cells updating at the same time
+
+            // We need a command buffer to update the entities from inside a job
             var updateCommandBuffer = commandBufferSystem.CreateCommandBuffer();           
 
             var tileCount = WorldSize.x * WorldSize.y;
@@ -357,29 +359,6 @@ namespace GameOfLifeV2
             }.Schedule(this, updateCells);
 
             commandBufferSystem.AddJobHandleForProducer(renderupdate);
-
-            renderupdate.Complete();
-            int changedThisFrame = 0;
-            int aliveNow = 0;
-            int deadNow = 0;
-            for(int idx = 0; idx < tileCount; ++idx)
-            {
-                if (cellState0[idx] != cellState1[idx])
-                {
-                    changedThisFrame++;
-                    if(cellState0[idx] && !cellState1[idx])
-                    {
-                        deadNow++;
-                    }
-                    else
-                    {
-                        aliveNow++;
-                    }
-                }
-            }
-
-            Debug.Log($"On frame {frameCount} - {changedThisFrame} entities flipped state : new Alive {aliveNow} : new Dead {deadNow}");
-            frameCount++;
             stateSelection = !stateSelection;
 
             return renderupdate;
