@@ -1,11 +1,10 @@
-﻿using Unity.Entities;
+using Unity.Entities;
 using Unity.Mathematics;
 
 namespace LifeComponents
 {
     // The basics of our 'life' in the system
     // The grid position is where this cell lives
-    // framesAlive just lets us track how long we've been alive for
     public struct LifeCell : IComponentData
     {
         public int2 gridPosition;

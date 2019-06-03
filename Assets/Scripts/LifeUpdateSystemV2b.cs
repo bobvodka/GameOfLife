@@ -15,7 +15,7 @@ namespace GameOfLifeV2b
 {
 
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    //[DisableAutoCreation]
+    [DisableAutoCreation]
     public class LifeUpdateSystem : JobComponentSystem
     {
         // A few config options
@@ -211,7 +211,7 @@ namespace GameOfLifeV2b
             }
         }
 
-        public struct CellRenderingUpdate : IJobForEachWithEntity<LifeCell>
+        public struct CellRenderingUpdate : IJobForEachWithEntity<LifeCell, Translation>
         {
             [ReadOnly] public NativeArray<uint> oldCellState;
             [ReadOnly] public NativeArray<uint> newCellState;
@@ -232,7 +232,7 @@ namespace GameOfLifeV2b
             }
 
             public EntityCommandBuffer.Concurrent CommandBuffer;
-            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0)
+            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, ref Translation position)
             {
                 // Because entities can move around in chunks we can't use the 'index' to look
                 // up their details, instead we need to use their grid position
@@ -249,16 +249,18 @@ namespace GameOfLifeV2b
 
                 if ((oldState & mask) != (newState & mask))
                 {
+                    var newPosition = position.Value;
                     if ((newState & mask) > 0)
                     {
-                        CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 1, c0.gridPosition.y) });
+                        newPosition.y = 1;
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.aliveRenderMesh);
                     }
                     else
                     {
-                        CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 0, c0.gridPosition.y) });
+                        newPosition.y = 0;
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.deadRenderMesh);
                     }
+                    position.Value = newPosition;
                 }
             }
         }

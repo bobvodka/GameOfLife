@@ -15,7 +15,7 @@ namespace GameOfLifeV2
 {
     
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [DisableAutoCreation]
+    //[DisableAutoCreation]
     public class LifeUpdateSystem : JobComponentSystem
     {
         // A few config options
@@ -23,15 +23,14 @@ namespace GameOfLifeV2
         private static int2 WorldSize = new int2 { x = 100, y = 100 };
         private uint WorldSeed = 1851936439U;
         private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = true;
+        private bool LimitUpdateRate = false;
 
         [BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
         {
-            [ReadOnly] public NativeArray<bool> cellState;
             [ReadOnly] public int2 gridSize;
+            [ReadOnly] public NativeArray<bool> cellState;
             [ReadOnly] public NativeArray<int2> offsetTable;
-
             public NativeArray<bool> newCellState;
 
             int ConvertToIndex(int2 location) => location.x + (location.y * gridSize.x);
@@ -59,14 +58,11 @@ namespace GameOfLifeV2
             {
                 // Flip the flat index back to a 2d location
                 var location = GetGlobalLocation(index);
-                int aliveCount = 0;
-                        
+                int aliveCount = 0;                      
                 for (int i = 0; i < offsetTable.Length; ++i)
                 {
                     int2 entityLocation = location + offsetTable[i];
-
-                    entityLocation = WrapLocation(entityLocation);
-                                                       
+                    entityLocation = WrapLocation(entityLocation);                                                     
                     var idx = ConvertToIndex(entityLocation);
                     if(cellState[idx])
                     {
@@ -88,40 +84,41 @@ namespace GameOfLifeV2
             }
         }
 
-        public struct CellRenderingUpdate : IJobForEachWithEntity<LifeCell>
+        public struct CellRenderingUpdate : IJobForEachWithEntity<LifeCell, Translation>
         {
             [ReadOnly] public NativeArray<bool> oldCellState;
             [ReadOnly] public NativeArray<bool> newCellState;
             [ReadOnly] public int2 GridSize;
+            public EntityCommandBuffer.Concurrent CommandBuffer;
 
             int ConvertToIndex(int2 location) => location.x + (location.y * GridSize.x);
 
-            public EntityCommandBuffer.Concurrent CommandBuffer;
-            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0)
+            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, ref Translation position)
             {
                 // Because entities can move around in chunks we can't use the 'index' to look
                 // up their details, instead we need to use their grid position
                 // to get the correct index in to the cell state grid
                 int idx = ConvertToIndex(c0.gridPosition);
-
                 if (oldCellState[idx] != newCellState[idx])
                 {
-                    if(newCellState[idx])
+                    var newPosition = position.Value;                   
+                    if (newCellState[idx])
                     {
-                        CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 1, c0.gridPosition.y) });
+                        newPosition.y = 1;
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.aliveRenderMesh);
                     }
                     else
                     {
-                        CommandBuffer.SetComponent(index, entity, new Translation { Value = new float3(c0.gridPosition.x, 0, c0.gridPosition.y) });
+                        newPosition.y = 0;
                         CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, LifeUpdateSystem.deadRenderMesh);
                     }
+                    position.Value = newPosition;
                 }
             }
         }
 
         EntityArchetype defaultArcheType;
-        BeginSimulationEntityCommandBufferSystem commandBufferSystem;
+        EndSimulationEntityCommandBufferSystem commandBufferSystem;
 
         private static RenderMesh aliveRenderMesh;
         private static RenderMesh deadRenderMesh;
@@ -200,7 +197,7 @@ namespace GameOfLifeV2
 
             // Grab a built in command buffer so that we can queue up updates for execution on the main thread
             // at some point in the future (in this case, before the next time 'update' runs
-            commandBufferSystem = World.Active.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
+            commandBufferSystem = World.Active.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
 
             // Setup the board and kick the simulation off
             GenerateLifeSeed(WorldSize);
@@ -340,15 +337,15 @@ namespace GameOfLifeV2
             // We need a command buffer to update the entities from inside a job
             var updateCommandBuffer = commandBufferSystem.CreateCommandBuffer();           
 
-            var tileCount = WorldSize.x * WorldSize.y;
+            var cellCount = WorldSize.x * WorldSize.y;
 
             var updateCells = new CellLifeProcessing
             {
-                gridSize = WorldSize,
-                cellState = stateSelection ? cellState0 : cellState1,
+                gridSize     = WorldSize,
+                cellState    = stateSelection ? cellState0 : cellState1,
                 newCellState = stateSelection ? cellState1 : cellState0,
-                offsetTable = offsetTable
-            }.Schedule(tileCount, 64, inputDeps);
+                offsetTable  = offsetTable
+            }.Schedule(cellCount, 64, inputDeps);
 
             var renderupdate = new CellRenderingUpdate
             {
@@ -360,7 +357,6 @@ namespace GameOfLifeV2
 
             commandBufferSystem.AddJobHandleForProducer(renderupdate);
             stateSelection = !stateSelection;
-
             return renderupdate;
         }
     }

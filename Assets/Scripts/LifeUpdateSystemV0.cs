@@ -20,7 +20,7 @@ namespace GameOfLifeV0
         private int2 WorldSize = new int2 { x = 100, y = 100 };
         private uint WorldSeed = 1851936439U;
         private float WorldUpdateRate = 0.1f;
-        private bool LimitUpdateRate = true;
+        private bool LimitUpdateRate = false;
 
         EntityArchetype defaultArcheType;
 
@@ -243,22 +243,24 @@ namespace GameOfLifeV0
                 lastUpdateTime = WorldUpdateRate;
             }
 
-            // On the main thread loop over all the entities, grabbing their details (LifeCell) and adjacency information in the DynamicBuffer
+            // On the main thread loop over all the entities, 
+            // grabbing their details (LifeCell) and adjacency information in the DynamicBuffer
             Entities.ForEach(( Entity entity, ref LifeCell lifeCell, DynamicBuffer<EntityElement> buffer) =>
             {
                 // First we loop over all those around us and count up how many are alive...
                 int aliveCount = 0;
                 for (int i = 0; i < buffer.Capacity; ++i)
                 {
-                    // As we are on the main thread we can just ask the EntityManager directly if they have the 
-                    // AliveCell component
+                    // As we are on the main thread we can just ask the 
+                    // EntityManager directly if they have the 'AliveCell' component
                     if (EntityManager.HasComponent<AliveCell>(buffer[i]))
                     {
                         aliveCount++;
                     }
                 }
 
-                // Then we see if we are alive or not and either stay alive, die or come to life as required
+                // Then we see if we are alive or not and either stay alive,
+                // die or come to life as required
                 if(EntityManager.HasComponent<AliveCell>(entity))
                 {
                     if(!(aliveCount == 2 || aliveCount == 3))
