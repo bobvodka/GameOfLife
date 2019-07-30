@@ -249,18 +249,21 @@ namespace GameOfLifeV0
             {
                 // First we loop over all those around us and count up how many are alive...
                 int aliveCount = 0;
-                for (int i = 0; i < buffer.Capacity; ++i)
+                foreach(var neighbour in buffer)
                 {
                     // As we are on the main thread we can just ask the 
                     // EntityManager directly if they have the 'AliveCell' component
-                    if (EntityManager.HasComponent<AliveCell>(buffer[i]))
+                    if (EntityManager.HasComponent<AliveCell>(neighbour))
                     {
                         aliveCount++;
                     }
                 }
 
                 // Then we see if we are alive or not and either stay alive,
-                // die or come to life as required
+                // die or come to life as required.
+                // While we can update the position and share component directly
+                // the add/removal of the AliveCell tag needs to wait until after
+                // the update as completed as it impacts the results of the function
                 if(EntityManager.HasComponent<AliveCell>(entity))
                 {
                     if(!(aliveCount == 2 || aliveCount == 3))
@@ -269,16 +272,16 @@ namespace GameOfLifeV0
                         // 'PostUpdateCommands' command buffer which executes once this update function has finished running.
                         PostUpdateCommands.RemoveComponent<AliveCell>(entity);
                         // and then do a couple of flips of data so that the rendering is in sync
-                        PostUpdateCommands.SetComponent(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 0, lifeCell.gridPosition.y) });
-                        PostUpdateCommands.SetSharedComponent<RenderMesh>(entity, deadRenderMesh);
+                        EntityManager.SetComponentData(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 0, lifeCell.gridPosition.y) });
+                        EntityManager.SetSharedComponentData<RenderMesh>(entity, deadRenderMesh);
                     }
                 }
                 else if(aliveCount == 3)
                 {
                     PostUpdateCommands.AddComponent(entity, new AliveCell { });
                     // and then do a couple of flips of data so that the rendering is in sync
-                    PostUpdateCommands.SetComponent(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 1, lifeCell.gridPosition.y) });
-                    PostUpdateCommands.SetSharedComponent<RenderMesh>(entity, aliveRenderMesh);
+                    EntityManager.SetComponentData(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 1, lifeCell.gridPosition.y) });
+                    EntityManager.SetSharedComponentData<RenderMesh>(entity, aliveRenderMesh);
                 }
             });
         }
