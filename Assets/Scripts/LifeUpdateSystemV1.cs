@@ -12,6 +12,9 @@ using LifeComponents;
 
 namespace GameOfLifeV1
 {
+    [UpdateAfter(typeof(LifeUpdateSystem))]
+    public class LifeDataUpdateSystem : EntityCommandBufferSystem { };
+
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [DisableAutoCreation]
     public class LifeUpdateSystem : JobComponentSystem
@@ -37,16 +40,15 @@ namespace GameOfLifeV1
             [ReadOnly]
             public BufferFromEntity<EntityElement> adjacency;
 
-            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, ref Translation position)
+            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, [ReadOnly] ref Translation position)
             {
                 // Grab the buffer associated with this entity...
                 var buffer = adjacency[entity];
                 // ... and figure out how many cells around us are alive this frame.
                 int aliveCount = 0;
-                for (int i = 0; i < buffer.Capacity; ++i)
+                foreach (var neighbour in buffer)
                 {
-
-                    if (aliveCells.Exists(buffer[i]))
+                    if (aliveCells.Exists(neighbour))
                     {
                         aliveCount++;
                     }
@@ -60,7 +62,7 @@ namespace GameOfLifeV1
                     // and then do a couple of flips of data so that the rendering is in sync
                     var newPosition = position.Value;
                     newPosition.y = 0;
-                    position.Value = newPosition;
+                    CommandBuffer.SetComponent(index, entity, new Translation { Value = newPosition }); 
                     CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, 
                         LifeUpdateSystem.deadRenderMesh);
                 }
@@ -81,16 +83,16 @@ namespace GameOfLifeV1
             [ReadOnly]
             public BufferFromEntity<EntityElement> adjacency;
 
-            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, ref Translation position)
+            public void Execute(Entity entity, int index, [ReadOnly] ref LifeCell c0, [ReadOnly] ref Translation position)
             {
                 // Grab the buffer associated with this entity...
                 var buffer = adjacency[entity];
 
                 // ... and figure out how many cells around us are alive this frame.
                 int aliveCount = 0;
-                for (int i = 0; i < buffer.Capacity; ++i)
+                foreach(var neighbour in buffer)
                 {
-                    if (aliveCells.Exists(buffer[i]))
+                    if (aliveCells.Exists(neighbour))
                     {
                         aliveCount++;
                     }
@@ -104,7 +106,7 @@ namespace GameOfLifeV1
                     // and then do a couple of flips of data so that the rendering is in sync
                     var newPosition = position.Value;
                     newPosition.y = 1;
-                    position.Value = newPosition;
+                    CommandBuffer.SetComponent(index, entity, new Translation { Value = newPosition });
                     CommandBuffer.SetSharedComponent<RenderMesh>(index, entity, 
                         LifeUpdateSystem.aliveRenderMesh);
                 }
@@ -112,7 +114,7 @@ namespace GameOfLifeV1
         }
 
         EntityArchetype defaultArcheType;
-        EndSimulationEntityCommandBufferSystem commandBufferSystem;
+        LifeDataUpdateSystem commandBufferSystem;
 
         private static RenderMesh aliveRenderMesh;
         private static RenderMesh deadRenderMesh;
@@ -192,7 +194,7 @@ namespace GameOfLifeV1
 
             // Grab a built in command buffer so that we can queue up updates for execution on the main thread
             // at some point in the future (in this case, before the next time 'update' runs
-            commandBufferSystem = World.Active.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+            commandBufferSystem = World.Active.GetOrCreateSystem<LifeDataUpdateSystem>();
 
             // Setup the board and kick the simulation off
             GenerateLifeSeed(WorldSize);
