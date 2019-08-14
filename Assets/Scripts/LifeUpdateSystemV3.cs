@@ -31,6 +31,8 @@ namespace GameOfLifeV3
         private float WorldUpdateRate = 0.1f;
         private bool LimitUpdateRate = false;
 
+        public float worldUpdateRate => WorldUpdateRate;
+
         [BurstCompile]
         public struct CellLifeProcessing : IJobParallelFor
         {
@@ -321,34 +323,55 @@ namespace GameOfLifeV3
         int maxVertexPerMesh = 0;
         LifeRender renderer;
 
+        NativeArray<float> isoLevels;
+
         NativeArray<VertexData> vertexData0;
         NativeArray<VertexData> vertexData1;
         NativeArray<int> vertexCount0;
         NativeArray<int> vertexCount1;
 
+        struct CellIsoLevelCalculation : IJobParallelFor
+        {
+            [ReadOnly]
+            public NativeArray<CellState> cellStates;
+
+            [WriteOnly]
+            public NativeArray<float> isoLevels;
+
+            [ReadOnly]
+            public float currentTime;
+
+            [ReadOnly]
+            public float maxGrowthTime;
+
+            public void Execute(int index)
+            {
+                CellState state = cellStates[index];
+                float maxTime = maxGrowthTime + state.timeStateChanged;
+                float normalisedPosition = (currentTime - state.timeStateChanged) / (maxTime - state.timeStateChanged);
+                float isoLevel = state.alive ? normalisedPosition : 1 - normalisedPosition;
+
+                isoLevels[index] = isoLevel;
+            }
+        }
+
         struct VertGenerationJob : IJobParallelFor
         {
             [ReadOnly]
-            NativeArray<CellState> cellStates;
+            public NativeArray<float> isoLevels;
 
             [WriteOnly]
-            NativeArray<int> vertexCount;
+            public NativeArray<int> vertexCount;
 
-            [ReadOnly] int2 worldSize;
-            [ReadOnly] int maxVertsPerCube;
-
-            [ReadOnly]
-            int3 numberCellsPerLifeCell;
+            [ReadOnly] public int2 worldSize;
+            [ReadOnly] public int maxVertsPerCube;
 
             [ReadOnly]
-            float currentTime;
-
-            [ReadOnly]
-            float maxGrowthTime;
+            public int3 numberCellsPerLifeCell;
 
             [NativeDisableParallelForRestriction]
             [WriteOnly]
-            NativeArray<VertexData> vertexData;
+            public NativeArray<VertexData> vertexData;
 
             private int GetCubeIndex(float[] yAxisPositions, float isoLevel)
             {
@@ -367,7 +390,11 @@ namespace GameOfLifeV3
 
             private float[] GenerateYAxisPositions(int x, int y, int z, int index)
             {
-                float[] yValues = new float[8];
+                float[] yValues = new float[8]
+                {
+                    y * 1, y * 1, y * 1, y * 1,                         // bottom row
+                    (y + 1) * 1, (y + 1) * 1,(y + 1) * 1,(y + 1) * 1    // top row
+                };
 
                 return yValues;
             }
@@ -378,16 +405,24 @@ namespace GameOfLifeV3
                 return v1.xyz + t * (v2.xyz - v1.xyz);
             }
 
+            // notes: need to generate a 'virtual' point inside the cube we are processing
+            // for each sub-section which should be an interpolated version of the position next to us
+            // so really we need another job which generates the 'now' information and then feeds in to this job
+            // ok.. lets write that then...
+
             public void Execute(int index)
             {
                 int offset = index * maxVertsPerCube;
 
-                CellState state = cellStates[index];
+                float isoLevel = isoLevels[index];
 
-                float maxTime = maxGrowthTime + state.timeStateChanged;
-                float normalisedPosition = (currentTime - state.timeStateChanged) / (maxTime - state.timeStateChanged);
-                float isoLevel = state.alive ? normalisedPosition : 1 - normalisedPosition;
+                // Read in the IsoLevels for the surrounding cells
 
+                // use that to construct a local field and then work out the interpolated
+                // level inside each point in our cell
+                
+
+                // Need to rework the below + support functions
                 // Now we loop over the sub-cells to generate the surface
                 for(int x = 0; x < numberCellsPerLifeCell.x; ++x)
                 {
@@ -446,7 +481,10 @@ namespace GameOfLifeV3
 
             // Reserve enough memory for the various counts
             vertexCount0 = new NativeArray<int>(maxWorldCells, Allocator.Persistent);
-            vertexCount1 = new NativeArray<int>(maxWorldCells, Allocator.Persistent);           
+            vertexCount1 = new NativeArray<int>(maxWorldCells, Allocator.Persistent);
+
+            // And some memory for the isoLevels
+            isoLevels = new NativeArray<float>(maxWorldCells, Allocator.TempJob);
 
         }
 
@@ -485,9 +523,27 @@ namespace GameOfLifeV3
         {
             NativeArray<CellState> cellStates = updateSystem.CellStateInfo;
 
+            // Setup job to generate the iso levels
+            var isoJobHandle = new CellIsoLevelCalculation
+            {
+                cellStates = cellStates,
+                isoLevels = isoLevels,
+                currentTime = Time.timeSinceLevelLoad,
+                maxGrowthTime = updateSystem.worldUpdateRate
+            }.Schedule(isoLevels.Length, 64, inputDeps);
+
+
             // Setup jobs to fillout vertex data for each patch of the mesh data
-
-
+            var meshGenHandle = new VertGenerationJob
+            {
+                isoLevels = isoLevels,
+                vertexData = GetVertexDataForWrite(),
+                vertexCount =  GetVertexCountPerMeshWrite(),
+                worldSize = worldSize,
+                maxVertsPerCube = maxVertsPerCube,
+                numberCellsPerLifeCell = numberCellsPerLifeCell
+            }.Schedule(isoLevels.Length, 64, isoJobHandle);
+            
             // Update the rendermesh data for rendering
             // We use one giant mesh which all submeshes 
             // are built in to, this means one draw call on the backend
@@ -506,7 +562,7 @@ namespace GameOfLifeV3
             }
 
             SwapBuffers();
-            return inputDeps;
+            return meshGenHandle;
 
         }
     }
