@@ -307,6 +307,7 @@ namespace GameOfLifeV3
         public float3 position;
     }
 
+    [DisableAutoCreation]
     public class LifeRenderingSystem : JobComponentSystem
     {
         LifeUpdateSystem updateSystem;
