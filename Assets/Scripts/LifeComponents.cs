@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace LifeComponents
 {
@@ -26,4 +27,10 @@ namespace LifeComponents
     // The tag which tells us we are alive
     public struct AliveCell : IComponentData
     { }
+
+    public struct LifeRender
+    {
+        public Mesh mesh;       
+        public Vector3 centre;
+    }
 }

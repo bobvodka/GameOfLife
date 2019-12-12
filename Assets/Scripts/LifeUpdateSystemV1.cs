@@ -12,7 +12,9 @@ using LifeComponents;
 
 namespace GameOfLifeV1
 {
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(LifeUpdateSystem))]
+    [DisableAutoCreation]
     public class LifeDataUpdateSystem : EntityCommandBufferSystem { };
 
     [UpdateInGroup(typeof(SimulationSystemGroup))]
