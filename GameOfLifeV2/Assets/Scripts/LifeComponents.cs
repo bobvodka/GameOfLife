@@ -63,4 +63,6 @@ namespace LifeComponents
         public float lastUpdateTime;
     }
 
+    public struct SingleThreadUpdateTag : IComponentData { };
+    public struct MultiThreadUpdateTag : IComponentData { };
 }

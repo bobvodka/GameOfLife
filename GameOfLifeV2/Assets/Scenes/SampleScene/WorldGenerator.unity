@@ -161,6 +161,7 @@ MonoBehaviour:
     type: 3}
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
+  SystemToUse: 1
 --- !u!4 &279589194
 Transform:
   m_ObjectHideFlags: 0
@@ -215,6 +216,7 @@ MonoBehaviour:
     type: 3}
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
+  SystemToUse: 0
 --- !u!4 &1370529715
 Transform:
   m_ObjectHideFlags: 0
@@ -269,6 +271,7 @@ MonoBehaviour:
     type: 3}
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
+  SystemToUse: 0
 --- !u!4 &1484661167
 Transform:
   m_ObjectHideFlags: 0

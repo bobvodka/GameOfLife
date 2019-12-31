@@ -19,6 +19,7 @@ public class WorldSetup
     public bool ShouldLimitUpdates { get; set; }
     public float3 CentrePoint { get; set; }
     public int2 GridSize { get; set; }
+    public UpdateSystem SystemToUse { get; set; }
 
     struct StartPatternStamp
     {
@@ -87,6 +88,12 @@ public class WorldSetup
                     // Populate the entity information - all cells start off 'dead'
                     entityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
                     entityManager.SetComponentData(cells[entityIdx], new Translation { Value = GetLocationAroundCentre(new float3(x, 0, y))});
+
+                    // Setup which system will perform the update
+                    if (SystemToUse == UpdateSystem.SingleThreaded)
+                        entityManager.AddComponentData(cells[entityIdx], new SingleThreadUpdateTag());
+                    else
+                        entityManager.AddComponentData(cells[entityIdx], new MultiThreadUpdateTag());
 
                     // This instantiates a copy of the dead cell prefab and parents it to the cell we are processing
                     var cellMesh = entityManager.Instantiate(DeadCellPrefab);

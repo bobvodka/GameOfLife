@@ -17,6 +17,13 @@ public struct GameOfLifeConfig : IComponentData
     public Entity AliveCell;
     public Entity DeadCell;
     public float3 Centre;
+    public UpdateSystem SystemToUse;
+}
+
+public enum UpdateSystem
+{
+    SingleThreaded,
+    MultiThreaded
 }
 
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
@@ -28,6 +35,7 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public bool LimitUpdateRate = false;
     public GameObject AliveCell;
     public GameObject DeadCell;
+    public UpdateSystem SystemToUse;
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
@@ -41,7 +49,8 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             LimitUpdateRate = this.LimitUpdateRate,
             AliveCell = conversionSystem.GetPrimaryEntity(this.AliveCell),
             DeadCell = conversionSystem.GetPrimaryEntity(this.DeadCell),
-            Centre = this.transform.position
+            Centre = this.transform.position,
+            SystemToUse = this.SystemToUse
         };
 
         dstManager.AddComponentData(entity, data);
@@ -87,7 +96,8 @@ public class LifeConfigSystem : JobComponentSystem
                 WorldUpdateRate = config.WorldUpdateRate,
                 ShouldLimitUpdates = config.LimitUpdateRate,
                 CentrePoint = config.Centre,
-                GridSize = config.WorldSize
+                GridSize = config.WorldSize,
+                SystemToUse = config.SystemToUse
             };
 
             worldSetupSystem.GenerateLifeSeed();

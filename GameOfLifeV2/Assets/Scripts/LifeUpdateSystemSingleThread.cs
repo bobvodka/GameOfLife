@@ -1,22 +1,20 @@
-﻿using UnityEngine;
-using Unity.Entities;
+﻿using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Rendering;
 using LifeComponents;
 using Unity.Transforms;
 using Unity.Collections;
 using System.Collections.Generic;
 
-namespace LifeUpdateSystem0
+namespace LifeUpdateSystem
 {
     [AlwaysSynchronizeSystem]
-    public class LifeUpdateSystem : JobComponentSystem
+    public class LifeUpdateSystemSingleThread : JobComponentSystem
     {
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
 
-            using (var cmds = new EntityCommandBuffer(Allocator.TempJob))
+            using (var cmds = new EntityCommandBuffer(Allocator.Persistent))
             {
                 // Grab any and all render details in the world
                 var sharedComponentData = new List<WorldDetails>();
@@ -38,8 +36,11 @@ namespace LifeUpdateSystem0
                         updateDetails.lastUpdateTime = updateDetails.WorldUpdateRate;
                     }
 
+                    //var cmds = new EntityCommandBuffer(Allocator.TempJob);
+
                     Entities.WithStructuralChanges()
                         .WithoutBurst()
+                        .WithAll<SingleThreadUpdateTag>()
                         .WithSharedComponentFilter(worldDetails)
                         .ForEach((Entity entity, ref Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {
@@ -94,6 +95,9 @@ namespace LifeUpdateSystem0
                             EntityManager.AddComponentData(renderable, new LocalToParent());
                         }
                     }).Run();
+
+                    //cmds.Playback(EntityManager);
+                    //cmds.Dispose();
                 }
 
                 //Update state of cells
