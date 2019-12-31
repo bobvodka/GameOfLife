@@ -16,6 +16,7 @@ public struct GameOfLifeConfig : IComponentData
     public bool LimitUpdateRate;
     public Entity AliveCell;
     public Entity DeadCell;
+    public float3 Centre;
 }
 
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
@@ -39,7 +40,8 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             WorldUpdateRate = this.WorldUpdateRate,
             LimitUpdateRate = this.LimitUpdateRate,
             AliveCell = conversionSystem.GetPrimaryEntity(this.AliveCell),
-            DeadCell = conversionSystem.GetPrimaryEntity(this.DeadCell)
+            DeadCell = conversionSystem.GetPrimaryEntity(this.DeadCell),
+            Centre = this.transform.position
         };
 
         dstManager.AddComponentData(entity, data);
@@ -83,10 +85,12 @@ public class LifeConfigSystem : JobComponentSystem
                 NumberOfStartingSeeds = config.NumberOfStartingSeeds,
                 cellArcheType = archeType,
                 WorldUpdateRate = config.WorldUpdateRate,
-                ShouldLimitUpdates = config.LimitUpdateRate
+                ShouldLimitUpdates = config.LimitUpdateRate,
+                CentrePoint = config.Centre,
+                GridSize = config.WorldSize
             };
 
-            worldSetupSystem.GenerateLifeSeed(config.WorldSize);
+            worldSetupSystem.GenerateLifeSeed();
         }).Run();
 
         // Then delete all the entities so that the update doesn't run again

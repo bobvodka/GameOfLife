@@ -15,6 +15,7 @@ namespace LifeUpdateSystem0
     {
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+
             using (var cmds = new EntityCommandBuffer(Allocator.TempJob))
             {
                 // Grab any and all render details in the world
@@ -40,7 +41,7 @@ namespace LifeUpdateSystem0
                     Entities.WithStructuralChanges()
                         .WithoutBurst()
                         .WithSharedComponentFilter(worldDetails)
-                        .ForEach((Entity entity, ref Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer) =>
+                        .ForEach((Entity entity, ref Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {
                         // First we loop over all those around us and count up how many are alive...
                         int aliveCount = 0;
@@ -56,39 +57,41 @@ namespace LifeUpdateSystem0
 
                         // Then we see if we are alive or not and either stay alive,
                         // die or come to life as required.
-                        // While we can update the position and share component directly
-                        // the add/removal of the AliveCell tag needs to wait until after
+                        // While we can update the position and change the child entity for rendering
+                        // directly the add/removal of the AliveCell tag needs to wait until after
                         // the update as completed as it impacts the results of the function
                         if (EntityManager.HasComponent<AliveCell>(entity))
                         {
                             if (!(aliveCount == 2 || aliveCount == 3))
                             {
                                 // Components still can't be removed while iterating, however for this system we can use the
-                                // 'PostUpdateCommands' command buffer which executes once this update function has finished running.
+                                // command buffer we created earlier which will be executed once this update function has finished running.
                                 cmds.RemoveComponent<AliveCell>(entity);
                                 // and then do a couple of flips of data so that the rendering is in sync
-                                cmds.SetComponent(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 0, lifeCell.gridPosition.y) });
+                                EntityManager.SetComponentData(entity, new Translation { Value = translation.Value - new float3(.0f, 1.0f, .0f) });
 
                                 // clean up the old mesh value and swap to the new renderable
-                                cmds.DestroyEntity(mesh.value);
                                 var renderable = EntityManager.Instantiate(worldDetails.DeadRenderer);
+                                cmds.DestroyEntity(mesh.value);
                                 mesh.value = renderable;
-                                cmds.AddComponent(renderable, new Parent { Value = entity });
-                                cmds.AddComponent(renderable, new LocalToParent());
+                                EntityManager.AddComponentData(renderable, new Parent { Value = entity });
+                                EntityManager.AddComponentData(renderable, new LocalToParent());
                             }
                         }
                         else if (aliveCount == 3)
                         {
+                            // Add the alive tag
                             cmds.AddComponent(entity, new AliveCell { });
-                        // and then do a couple of flips of data so that the rendering is in sync
-                        cmds.SetComponent(entity, new Translation { Value = new float3(lifeCell.gridPosition.x, 1, lifeCell.gridPosition.y) });
 
-                        // clean up the old mesh value and swap to the new renderable
-                        cmds.DestroyEntity(mesh.value);
+                            // and then do a couple of flips of data so that the rendering is in sync
+                            EntityManager.SetComponentData(entity, new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) });
+
+                            // clean up the old mesh value and swap to the new renderable
                             var renderable = EntityManager.Instantiate(worldDetails.AliveRenderer);
+                            cmds.DestroyEntity(mesh.value);
                             mesh.value = renderable;
-                            cmds.AddComponent(renderable, new Parent { Value = entity });
-                            cmds.AddComponent(renderable, new LocalToParent());
+                            EntityManager.AddComponentData(renderable, new Parent { Value = entity });
+                            EntityManager.AddComponentData(renderable, new LocalToParent());
                         }
                     }).Run();
                 }

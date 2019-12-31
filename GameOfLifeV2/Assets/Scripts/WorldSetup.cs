@@ -17,6 +17,8 @@ public class WorldSetup
     public int NumberOfStartingSeeds { get; set; }
     public float WorldUpdateRate { get; set; }
     public bool ShouldLimitUpdates { get; set; }
+    public float3 CentrePoint { get; set; }
+    public int2 GridSize { get; set; }
 
     struct StartPatternStamp
     {
@@ -24,15 +26,15 @@ public class WorldSetup
         public int2 location;
     }
 
-    public void GenerateLifeSeed(int2 gridSize)
+    public void GenerateLifeSeed()
     {
-        var lifeStart = GeneratePatternStamps(NumberOfStartingSeeds, gridSize, new int2[][]
+        var lifeStart = GeneratePatternStamps(NumberOfStartingSeeds, GridSize, new int2[][]
         {
                 gliderTable, lightweightspaceShip, pentomino, acorn
         });
 
         // Generate the entities in one batch
-        int entityCount = gridSize.x * gridSize.y;
+        int entityCount = GridSize.x * GridSize.y;
         using (var cells = new NativeArray<Entity>(entityCount, Allocator.Persistent))
         {
             var worldUpdateDetails = new WorldUpdateDetails
@@ -61,9 +63,9 @@ public class WorldSetup
             var renderableEntitys = new NativeArray<Entity>(entityCount, Allocator.Persistent);
 
             // Generate adjency information for each cell
-            for (int x = 0; x < gridSize.x; ++x)
+            for (int x = 0; x < GridSize.x; ++x)
             {
-                for (int y = 0; y < gridSize.y; ++y)
+                for (int y = 0; y < GridSize.y; ++y)
                 {
                     int2 location = new int2(x, y);
 
@@ -73,18 +75,18 @@ public class WorldSetup
                     {
                         int2 entityLocation = location + offsetTable[i];
 
-                        entityLocation = WrapLocation(entityLocation, gridSize);
+                        entityLocation = WrapLocation(entityLocation, GridSize);
 
-                        int idx = ConvertToEntityIndex(entityLocation, gridSize);
+                        int idx = ConvertToEntityIndex(entityLocation, GridSize);
 
                         adjacency[i] = cells[idx];
                     }
 
-                    int entityIdx = ConvertToEntityIndex(location, gridSize);
+                    int entityIdx = ConvertToEntityIndex(location, GridSize);
 
                     // Populate the entity information - all cells start off 'dead'
                     entityManager.SetComponentData(cells[entityIdx], new LifeCell { gridPosition = location });
-                    entityManager.SetComponentData(cells[entityIdx], new Translation { Value = new float3(x, 0, y) });
+                    entityManager.SetComponentData(cells[entityIdx], new Translation { Value = GetLocationAroundCentre(new float3(x, 0, y))});
 
                     // This instantiates a copy of the dead cell prefab and parents it to the cell we are processing
                     var cellMesh = entityManager.Instantiate(DeadCellPrefab);
@@ -106,7 +108,7 @@ public class WorldSetup
                 }
             }
 
-            SetupBoardCondition(cells, gridSize, lifeStart, renderableEntitys);
+            SetupBoardCondition(cells, GridSize, lifeStart, renderableEntitys);
             renderableEntitys.Dispose();
         }
     }
@@ -120,6 +122,12 @@ public class WorldSetup
         };
 
     int ConvertToEntityIndex(int2 location, int2 gridSize) => location.x + (location.y * gridSize.x);
+
+    float3 GetLocationAroundCentre(float3 position) => new float3(
+        position.x - ((float)GridSize.x/2.0f) + CentrePoint.x,
+        position.y + CentrePoint.y,
+        position.z - ((float)GridSize.y/2.0f) + CentrePoint.z);
+
     #endregion
 
     #region Setup functions
@@ -160,7 +168,7 @@ public class WorldSetup
                     // This the logic that makes the cells 'alive' by simply adding a tag component
                     entityManager.AddComponent(entities[entityIndex], typeof(AliveCell));
                     // The location is adjusted slightly because it looks nicer
-                    entityManager.SetComponentData(entities[entityIndex], new Translation { Value = new float3(location.x, 1, location.y) });
+                    entityManager.SetComponentData(entities[entityIndex], new Translation { Value = GetLocationAroundCentre(new float3(location.x, 1, location.y)) });
                     // And we instatiate an instance of the alive cell prefab and set its parent to the cell we are processing
                     var cellMesh = entityManager.Instantiate(AliveCellPrefab);
                     entityManager.AddComponentData(cellMesh, new Parent { Value = entities[entityIndex] });
@@ -169,6 +177,9 @@ public class WorldSetup
 
                     // Clean up the one we added initially
                     entityManager.DestroyEntity(renderables[entityIndex]);
+                    // and replce the entry incase we hit this cell again
+                    // otherwise we end up with more than 1 child on a cell
+                    renderables[entityIndex] = cellMesh;
                 }
             }
         }

@@ -121,6 +121,114 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &279589192
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 279589194}
+  - component: {fileID: 279589193}
+  m_Layer: 0
+  m_Name: WorldGenerator 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &279589193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 279589192}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NumberOfStartingSeeds: 4
+  WorldSize:
+    x: 40
+    y: 20
+  WorldSeed: 58373831
+  WorldUpdateRate: 0.3
+  LimitUpdateRate: 1
+  AliveCell: {fileID: 2382592008639981078, guid: 3a3c2f720aaf34383990f6d29772efcd,
+    type: 3}
+  DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
+    type: 3}
+--- !u!4 &279589194
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 279589192}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11, y: 0, z: 21}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1370529713
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1370529715}
+  - component: {fileID: 1370529714}
+  m_Layer: 0
+  m_Name: WorldGenerator 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1370529714
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1370529713}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NumberOfStartingSeeds: 1
+  WorldSize:
+    x: 20
+    y: 20
+  WorldSeed: 374733
+  WorldUpdateRate: 0.2
+  LimitUpdateRate: 1
+  AliveCell: {fileID: 6319570021620205276, guid: 6f02a00eaf56d4017bfeef950a5e55f9,
+    type: 3}
+  DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
+    type: 3}
+--- !u!4 &1370529715
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1370529713}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 21, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1484661165
 GameObject:
   m_ObjectHideFlags: 0
@@ -150,10 +258,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  NumberOfStartingSeeds: 12
+  NumberOfStartingSeeds: 3
   WorldSize:
-    x: 100
-    y: 100
+    x: 20
+    y: 20
   WorldSeed: 1851936439
   WorldUpdateRate: 0.1
   LimitUpdateRate: 1
