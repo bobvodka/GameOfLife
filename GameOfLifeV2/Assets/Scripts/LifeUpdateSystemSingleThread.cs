@@ -8,9 +8,24 @@ using System.Collections.Generic;
 
 namespace LifeUpdateSystem
 {
+
     [AlwaysSynchronizeSystem]
+    [UpdateInGroup(typeof(LifeUpdateGroup))]
+    [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
     public class LifeUpdateSystemSingleThread : JobComponentSystem
     {
+        EntityQuery updateFinder;
+
+        protected override void OnCreate()
+        {
+            updateFinder = GetEntityQuery(
+                typeof(WorldUpdateTracker),
+                typeof(ShouldUpdateTag),
+                typeof(SingleThreadUpdateTag),
+                typeof(WorldDetails)
+                );
+        }
+
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
 
@@ -22,21 +37,12 @@ namespace LifeUpdateSystem
 
                 foreach (var worldDetails in sharedComponentData)
                 {
-                    var updateDetails = worldDetails.updateDetails;
 
-                    if (updateDetails == null)
+                    updateFinder.SetSharedComponentFilter(worldDetails);
+                    if (updateFinder.CalculateEntityCount() == 0)
                         continue;
 
-                    if(updateDetails.ShouldLimitUpdates)
-                    {
-                        updateDetails.lastUpdateTime -= Time.DeltaTime;
-                        if (updateDetails.lastUpdateTime > 0.0f)
-                            continue;
-
-                        updateDetails.lastUpdateTime = updateDetails.WorldUpdateRate;
-                    }
-
-                    //var cmds = new EntityCommandBuffer(Allocator.TempJob);
+                    var updateFilter = updateFinder.GetSingletonEntity();
 
                     Entities.WithStructuralChanges()
                         .WithoutBurst()
@@ -96,8 +102,7 @@ namespace LifeUpdateSystem
                         }
                     }).Run();
 
-                    //cmds.Playback(EntityManager);
-                    //cmds.Dispose();
+                    EntityManager.RemoveComponent<ShouldUpdateTag>(updateFilter);
                 }
 
                 //Update state of cells

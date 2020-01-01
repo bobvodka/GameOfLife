@@ -117,6 +117,17 @@ public class WorldSetup
 
             SetupBoardCondition(cells, GridSize, lifeStart, renderableEntitys);
             renderableEntitys.Dispose();
+
+            // Finally we setup an entity which tracks if this instance of the world needs to be updated or not
+            // It has tags for the threading of the update system so we can correctly dispatch later
+
+            var worldUpdateTracker = entityManager.CreateEntity();
+            entityManager.AddComponentData(worldUpdateTracker, new WorldUpdateTracker());
+            if (SystemToUse == UpdateSystem.SingleThreaded)
+                entityManager.AddComponentData(worldUpdateTracker, new SingleThreadUpdateTag());
+            else
+                entityManager.AddComponentData(worldUpdateTracker, new MultiThreadUpdateTag());
+            entityManager.AddSharedComponentData(worldUpdateTracker, worldDetails);
         }
     }
 

@@ -65,4 +65,9 @@ namespace LifeComponents
 
     public struct SingleThreadUpdateTag : IComponentData { };
     public struct MultiThreadUpdateTag : IComponentData { };
+
+    public struct ShouldUpdateTag : IComponentData { };
+    public struct WorldUpdateTracker : IComponentData { };
+
+    public class LifeUpdateGroup : ComponentSystemGroup { }
 }
