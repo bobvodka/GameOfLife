@@ -37,6 +37,8 @@ namespace LifeUpdateSystem
             EntityManager.GetAllUniqueSharedComponentData(sharedComponentData);
             var updateJobs = new JobHandle();
 
+            var removeCmds = cmdBufferSystem.CreateCommandBuffer();
+
             foreach (var worldDetails in sharedComponentData)
             {
 
@@ -114,7 +116,7 @@ namespace LifeUpdateSystem
                 cmdBufferSystem.AddJobHandleForProducer(updateHandle);
                 updateJobs = JobHandle.CombineDependencies(updateJobs, updateHandle);
 
-                EntityManager.RemoveComponent<ShouldUpdateTag>(updateFilter);
+                removeCmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
             }
 
             return updateJobs;
@@ -123,7 +125,6 @@ namespace LifeUpdateSystem
 
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(LifeUpdateSystemMultiThread))]
-    [UpdateAfter(typeof(LifeUpdateSystemSingleThread))]
     public class CellStateUpdateCommandBufferSystem : EntityCommandBufferSystem { }
 
     [AlwaysSynchronizeSystem]

@@ -12,6 +12,7 @@ namespace LifeUpdateSystem
     [AlwaysSynchronizeSystem]
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
+    [UpdateAfter(typeof(CellStateUpdateCommandBufferSystem))]
     public class LifeUpdateSystemSingleThread : JobComponentSystem
     {
         EntityQuery updateFinder;
@@ -46,7 +47,6 @@ namespace LifeUpdateSystem
 
                     Entities.WithStructuralChanges()
                         .WithoutBurst()
-                        .WithAll<SingleThreadUpdateTag>()
                         .WithSharedComponentFilter(worldDetails)
                         .ForEach((Entity entity, ref Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {

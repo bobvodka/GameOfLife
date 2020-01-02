@@ -205,12 +205,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  NumberOfStartingSeeds: 8
+  NumberOfStartingSeeds: 9
   WorldSize:
     x: 40
     y: 20
   WorldSeed: 4294967295
-  WorldUpdateRate: 0.1
+  WorldUpdateRate: 0.05
   LimitUpdateRate: 1
   AliveCell: {fileID: 3847614416280935281, guid: f46aaebd69ff54e21a30a3cda583f2a3,
     type: 3}
@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  NumberOfStartingSeeds: 1
+  NumberOfStartingSeeds: 4
   WorldSize:
     x: 20
     y: 20
@@ -315,7 +315,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  NumberOfStartingSeeds: 3
+  NumberOfStartingSeeds: 5
   WorldSize:
     x: 20
     y: 20
