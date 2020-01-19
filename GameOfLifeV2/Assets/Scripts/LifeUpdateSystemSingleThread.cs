@@ -12,10 +12,11 @@ namespace LifeUpdateSystem
     [AlwaysSynchronizeSystem]
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
-    [UpdateAfter(typeof(CellStateUpdateCommandBufferSystem))]
     public class LifeUpdateSystemSingleThread : JobComponentSystem
     {
         EntityQuery updateFinder;
+
+        CellStateUpdateCommandBufferSystem commandBufferSystem;
 
         protected override void OnCreate()
         {
@@ -25,12 +26,14 @@ namespace LifeUpdateSystem
                 typeof(SingleThreadUpdateTag),
                 typeof(WorldDetails)
                 );
+
+            commandBufferSystem = World.GetOrCreateSystem<CellStateUpdateCommandBufferSystem>();
         }
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
 
-            using (var cmds = new EntityCommandBuffer(Allocator.Persistent))
+            var cmds = commandBufferSystem.CreateCommandBuffer();
             {
                 // Grab any and all render details in the world
                 var sharedComponentData = new List<WorldDetails>();
@@ -44,11 +47,12 @@ namespace LifeUpdateSystem
                         continue;
 
                     var updateFilter = updateFinder.GetSingletonEntity();
+                    var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
-                    Entities.WithStructuralChanges()
-                        .WithoutBurst()
+                    Entities
+                        //.WithoutBurst()
                         .WithSharedComponentFilter(worldDetails)
-                        .ForEach((Entity entity, ref Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
+                        .ForEach((Entity entity, in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {
                         // First we loop over all those around us and count up how many are alive...
                         int aliveCount = 0;
@@ -56,7 +60,7 @@ namespace LifeUpdateSystem
                         {
                             // As we are on the main thread we can just ask the 
                             // EntityManager directly if they have the 'AliveCell' component
-                            if (EntityManager.HasComponent<AliveCell>(neighbour))
+                            if (aliveCells.Exists(neighbour))
                             {
                                 aliveCount++;
                             }
@@ -67,7 +71,7 @@ namespace LifeUpdateSystem
                         // While we can update the position and change the child entity for rendering
                         // directly the add/removal of the AliveCell tag needs to wait until after
                         // the update as completed as it impacts the results of the function
-                        if (EntityManager.HasComponent<AliveCell>(entity))
+                        if (aliveCells.Exists(entity))
                         {
                             if (!(aliveCount == 2 || aliveCount == 3))
                             {
@@ -75,14 +79,13 @@ namespace LifeUpdateSystem
                                 // command buffer we created earlier which will be executed once this update function has finished running.
                                 cmds.RemoveComponent<AliveCell>(entity);
                                 // and then do a couple of flips of data so that the rendering is in sync
-                                EntityManager.SetComponentData(entity, new Translation { Value = translation.Value - new float3(.0f, 1.0f, .0f) });
+                                cmds.SetComponent(entity, new Translation { Value = translation.Value - new float3(.0f, 1.0f, .0f) });
 
                                 // clean up the old mesh value and swap to the new renderable
-                                var renderable = EntityManager.Instantiate(worldDetails.DeadRenderer);
+                                var renderable = cmds.Instantiate(worldDetails.DeadRenderer);
                                 cmds.DestroyEntity(mesh.value);
-                                mesh.value = renderable;
-                                EntityManager.AddComponentData(renderable, new Parent { Value = entity });
-                                EntityManager.AddComponentData(renderable, new LocalToParent());
+                                
+                                cmds.AddComponent(renderable, new Parent { Value = entity });
                             }
                         }
                         else if (aliveCount == 3)
@@ -91,22 +94,17 @@ namespace LifeUpdateSystem
                             cmds.AddComponent(entity, new AliveCell { });
 
                             // and then do a couple of flips of data so that the rendering is in sync
-                            EntityManager.SetComponentData(entity, new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) });
+                            cmds.SetComponent(entity, new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) });
 
                             // clean up the old mesh value and swap to the new renderable
-                            var renderable = EntityManager.Instantiate(worldDetails.AliveRenderer);
+                            var renderable = cmds.Instantiate(worldDetails.AliveRenderer);
                             cmds.DestroyEntity(mesh.value);
-                            mesh.value = renderable;
-                            EntityManager.AddComponentData(renderable, new Parent { Value = entity });
-                            EntityManager.AddComponentData(renderable, new LocalToParent());
+                            cmds.AddComponent(renderable, new Parent { Value = entity });
                         }
                     }).Run();
 
-                    EntityManager.RemoveComponent<ShouldUpdateTag>(updateFilter);
-                }
-
-                //Update state of cells
-                cmds.Playback(EntityManager);
+                    cmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
+                }                
             }
 
             return default;

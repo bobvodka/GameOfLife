@@ -58,7 +58,7 @@ namespace LifeUpdateSystem
                     .WithSharedComponentFilter(worldDetails)
                     .WithReadOnly(aliveCells)
                     .WithNativeDisableContainerSafetyRestriction(aliveCells)
-                    .WithoutBurst()
+                    //.WithoutBurst()
                     .ForEach((Entity entity, int entityInQueryIndex,
                     in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                 {
@@ -122,28 +122,4 @@ namespace LifeUpdateSystem
             return updateJobs;
         }
     }
-
-    [UpdateInGroup(typeof(LifeUpdateGroup))]
-    [UpdateAfter(typeof(LifeUpdateSystemMultiThread))]
-    public class CellStateUpdateCommandBufferSystem : EntityCommandBufferSystem { }
-
-    [AlwaysSynchronizeSystem]
-    [UpdateInGroup(typeof(LifeUpdateGroup))]
-    [UpdateAfter(typeof(CellStateUpdateCommandBufferSystem))]
-    public class RenderingEntitySyncSystem : JobComponentSystem
-    {
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
-        {
-
-            Entities.WithNone<LocalToParent>()
-                .WithStructuralChanges()
-                .ForEach((Entity renderable, in Parent parentCell) =>
-                {
-                    EntityManager.AddComponentData(parentCell.Value, new Renderable { value = renderable });
-                    EntityManager.AddComponentData(renderable, new LocalToParent());
-                }).Run();
-
-            return default;
-        }
-    };
 }
