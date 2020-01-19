@@ -20,6 +20,8 @@ namespace LifeUpdateSystem
 
         protected override void OnCreate()
         {
+            // This query is used to find the entity which
+            // represents a Game Of Life board.
             updateFinder = GetEntityQuery(
                 typeof(WorldUpdateTracker),
                 typeof(ShouldUpdateTag),
@@ -32,25 +34,25 @@ namespace LifeUpdateSystem
 
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-
+            // Grab a command buffer so that we can queue update commands
             var cmds = commandBufferSystem.CreateCommandBuffer();
             {
-                // Grab any and all render details in the world
+                // Grab a list of all the unique WorldDetails shared components in the world
+                // this is used to find all the potential boards in the world to update
                 var sharedComponentData = new List<WorldDetails>();
                 EntityManager.GetAllUniqueSharedComponentData(sharedComponentData);
 
                 foreach (var worldDetails in sharedComponentData)
                 {
-
+                    // Set the filter on the query to match the current world
+                    // and then see if any entity matches that query 
                     updateFinder.SetSharedComponentFilter(worldDetails);
                     if (updateFinder.CalculateEntityCount() == 0)
                         continue;
 
-                    var updateFilter = updateFinder.GetSingletonEntity();
                     var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
                     Entities
-                        //.WithoutBurst()
                         .WithSharedComponentFilter(worldDetails)
                         .ForEach((Entity entity, in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {
@@ -58,8 +60,7 @@ namespace LifeUpdateSystem
                         int aliveCount = 0;
                         foreach (var neighbour in buffer)
                         {
-                            // As we are on the main thread we can just ask the 
-                            // EntityManager directly if they have the 'AliveCell' component
+                            // Check to see if our neighbour cells are alive or not
                             if (aliveCells.Exists(neighbour))
                             {
                                 aliveCount++;
@@ -68,24 +69,23 @@ namespace LifeUpdateSystem
 
                         // Then we see if we are alive or not and either stay alive,
                         // die or come to life as required.
-                        // While we can update the position and change the child entity for rendering
-                        // directly the add/removal of the AliveCell tag needs to wait until after
-                        // the update as completed as it impacts the results of the function
+                        // All changes are staged in to a command buffer - this lets us
+                        // use Burst to improve the performance here
                         if (aliveCells.Exists(entity))
                         {
                             if (!(aliveCount == 2 || aliveCount == 3))
                             {
                                 // Components still can't be removed while iterating, however for this system we can use the
-                                // command buffer we created earlier which will be executed once this update function has finished running.
+                                // command buffer we created earlier which will be executed once this system has got done running.
                                 cmds.RemoveComponent<AliveCell>(entity);
                                 // and then do a couple of flips of data so that the rendering is in sync
                                 cmds.SetComponent(entity, new Translation { Value = translation.Value - new float3(.0f, 1.0f, .0f) });
 
-                                // clean up the old mesh value and swap to the new renderable
+                                // Spawn a new renderable and link it to the cell on the board,
+                                // and clean up the old one
                                 var renderable = cmds.Instantiate(worldDetails.DeadRenderer);
-                                cmds.DestroyEntity(mesh.value);
-                                
                                 cmds.AddComponent(renderable, new Parent { Value = entity });
+                                cmds.DestroyEntity(mesh.value);
                             }
                         }
                         else if (aliveCount == 3)
@@ -96,13 +96,17 @@ namespace LifeUpdateSystem
                             // and then do a couple of flips of data so that the rendering is in sync
                             cmds.SetComponent(entity, new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) });
 
-                            // clean up the old mesh value and swap to the new renderable
+                            // Spawn a new renderable and link it to the cell on the board,
+                            // and clean up the old one
                             var renderable = cmds.Instantiate(worldDetails.AliveRenderer);
-                            cmds.DestroyEntity(mesh.value);
                             cmds.AddComponent(renderable, new Parent { Value = entity });
+                            cmds.DestroyEntity(mesh.value);
                         }
                     }).Run();
 
+                    // Finally clear the update tag so we don't touch this system until it
+                    // requires it's next update
+                    var updateFilter = updateFinder.GetSingletonEntity();
                     cmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
                 }                
             }

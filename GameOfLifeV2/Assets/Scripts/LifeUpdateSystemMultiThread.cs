@@ -37,6 +37,8 @@ namespace LifeUpdateSystem
             EntityManager.GetAllUniqueSharedComponentData(sharedComponentData);
             var updateJobs = new JobHandle();
 
+            // Grab a command buffer to store the remove comamnds in for the update
+            // filter entities.
             var removeCmds = cmdBufferSystem.CreateCommandBuffer();
 
             foreach (var worldDetails in sharedComponentData)
@@ -45,20 +47,22 @@ namespace LifeUpdateSystem
                 updateFinder.SetSharedComponentFilter(worldDetails);
                 if (updateFinder.CalculateEntityCount() == 0)
                     continue;
-
-                var updateFilter = updateFinder.GetSingletonEntity();
-
+              
+                // Grab a command buffer for this update function to store commands in
                 var cmds = cmdBufferSystem.CreateCommandBuffer().ToConcurrent();
+
+                // And grab the component data for the entities with AliveCells attached
                 var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
+                // We need to make a local copy of the entity IDs for the renderable
+                // prefabs as we can't access worldDetails directly in the lambda as
+                // it's a managed type.
                 Entity DeadRenderer = worldDetails.DeadRenderer;
                 Entity AliveRenderer = worldDetails.AliveRenderer;
 
                 var updateHandle = Entities
                     .WithSharedComponentFilter(worldDetails)
                     .WithReadOnly(aliveCells)
-                    .WithNativeDisableContainerSafetyRestriction(aliveCells)
-                    //.WithoutBurst()
                     .ForEach((Entity entity, int entityInQueryIndex,
                     in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                 {
@@ -67,8 +71,8 @@ namespace LifeUpdateSystem
                     int aliveCount = 0;
                     foreach (var neighbour in buffer)
                     {
-                        // As we are on the main thread we can just ask the 
-                        // EntityManager directly if they have the 'AliveCell' component
+                        // Check in the component data array to see if our
+                        // neighbour is alive or not
                         if (aliveCells.Exists(neighbour))
                         {
                             aliveCount++;
@@ -77,23 +81,22 @@ namespace LifeUpdateSystem
 
                     // Then we see if we are alive or not and either stay alive,
                     // die or come to life as required.
-                    // While we can update the position and change the child entity for rendering
-                    // directly the add/removal of the AliveCell tag needs to wait until after
-                    // the update as completed as it impacts the results of the function
+                    // As we are executing on multiple threads we need to store the changes in the command buffer
+                    // for later execution
                     if (aliveCells.Exists(entity))
                     {
                         if (!(aliveCount == 2 || aliveCount == 3))
                         {
                             // Components still can't be removed while iterating, however for this system we can use the
-                            // command buffer we created earlier which will be executed once this update function has finished running.
+                            // command buffer we created earlier which will be executed once this update system has finished running.
                             cmds.RemoveComponent<AliveCell>(entityInQueryIndex, entity);
                             // and then do a couple of flips of data so that the rendering is in sync
                             cmds.SetComponent(entityInQueryIndex, entity, new Translation { Value = translation.Value - new float3(.0f, 1.0f, .0f) });
 
                             // clean up the old mesh value and swap to the new renderable
                             var renderable = cmds.Instantiate(entityInQueryIndex, DeadRenderer);
-                            cmds.DestroyEntity(entityInQueryIndex, mesh.value);
                             cmds.AddComponent(entityInQueryIndex, renderable, new Parent { Value = entity });
+                            cmds.DestroyEntity(entityInQueryIndex, mesh.value);
                         }
                     }
                     else if (aliveCount == 3)
@@ -106,16 +109,18 @@ namespace LifeUpdateSystem
 
                         // clean up the old mesh value and swap to the new renderable
                         var renderable = cmds.Instantiate(entityInQueryIndex, AliveRenderer);
-                        cmds.DestroyEntity(entityInQueryIndex, mesh.value);
                         cmds.AddComponent(entityInQueryIndex, renderable, new Parent { Value = entity });
+                        cmds.DestroyEntity(entityInQueryIndex, mesh.value);
                     }
 
                 }).Schedule(inputDeps);
+
                 updateHandle.Complete();
 
                 cmdBufferSystem.AddJobHandleForProducer(updateHandle);
                 updateJobs = JobHandle.CombineDependencies(updateJobs, updateHandle);
 
+                var updateFilter = updateFinder.GetSingletonEntity();
                 removeCmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
             }
 
