@@ -1,4 +1,4 @@
-﻿using Unity.Entities;
+using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using LifeComponents;
@@ -69,8 +69,10 @@ namespace LifeUpdateSystem
 
                     // First we loop over all those around us and count up how many are alive...
                     int aliveCount = 0;
-                    foreach (var neighbour in buffer)
+                    for (int nIdx = 0; nIdx < buffer.Length; ++nIdx)
                     {
+                        var neighbour = buffer[nIdx];
+
                         // Check in the component data array to see if our
                         // neighbour is alive or not
                         if (aliveCells.Exists(neighbour))
