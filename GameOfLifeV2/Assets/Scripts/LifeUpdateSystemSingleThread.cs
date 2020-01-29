@@ -9,7 +9,6 @@ using System.Collections.Generic;
 namespace LifeUpdateSystem
 {
 
-    [AlwaysSynchronizeSystem]
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
     public class LifeUpdateSystemSingleThread : JobComponentSystem
@@ -113,7 +112,7 @@ namespace LifeUpdateSystem
                 }                
             }
 
-            return default;
+            return inputDeps;
         }
     }
 }

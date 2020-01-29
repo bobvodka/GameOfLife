@@ -117,7 +117,6 @@ namespace LifeUpdateSystem
 
                 }).Schedule(inputDeps);
 
-                updateHandle.Complete();
 
                 cmdBufferSystem.AddJobHandleForProducer(updateHandle);
                 updateJobs = JobHandle.CombineDependencies(updateJobs, updateHandle);
