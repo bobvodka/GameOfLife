@@ -1,9 +1,6 @@
 ﻿using Unity.Entities;
 using Unity.Jobs;
-using Unity.Mathematics;
 using LifeComponents;
-using Unity.Transforms;
-using Unity.Collections;
 using System.Collections.Generic;
 
 [AlwaysSynchronizeSystem]

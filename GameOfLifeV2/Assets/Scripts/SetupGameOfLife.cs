@@ -3,9 +3,11 @@ using Unity.Entities;
 using Unity.Mathematics;
 using System.Collections.Generic;
 using Unity.Jobs;
+using Unity.Transforms;
 
 using LifeComponents;
-using Unity.Transforms;
+
+using UnityEngine.VFX;
 
 public struct GameOfLifeConfig : IComponentData
 {
@@ -26,6 +28,7 @@ public enum UpdateSystem
     MultiThreaded
 }
 
+[ConverterVersion(userName: "robj", version: 1)]
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
 {
     public int NumberOfStartingSeeds = 12;
@@ -36,6 +39,8 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public GameObject AliveCell;
     public GameObject DeadCell;
     public UpdateSystem SystemToUse;
+    public GameObject particles;
+    public int MaxParticles;
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
@@ -54,6 +59,17 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
         };
 
         dstManager.AddComponentData(entity, data);
+
+        var shared = new ParticleSystemWrapper()
+        {
+            //particleSystem = particles
+            particleSystem = UnityEngine.GameObject.Instantiate(particles, Vector3.zero, UnityEngine.Quaternion.identity),
+            positionTexture = new Texture2D(MaxParticles, 1, TextureFormat.RGFloat, false),
+            MaxParticles = MaxParticles
+        };
+        shared.particleSystem.GetComponent<VisualEffect>().SetTexture("particlePositions", shared.positionTexture);
+
+        dstManager.AddSharedComponentData(entity, shared);
     }
 
     public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
@@ -81,10 +97,13 @@ public class LifeConfigSystem : JobComponentSystem
             );
 
         Entities.WithStructuralChanges()
+            .WithName("World Generation")
             .WithStoreEntityQueryInField(ref setupQuery)
             .WithoutBurst()
             .ForEach((Entity entity, in GameOfLifeConfig config) =>
         {
+            var particleWrapper = EntityManager.GetSharedComponentData<ParticleSystemWrapper>(entity);
+
             var worldSetupSystem = new WorldSetup()
             {
                 WorldSeed = config.WorldSeed,
@@ -97,7 +116,10 @@ public class LifeConfigSystem : JobComponentSystem
                 ShouldLimitUpdates = config.LimitUpdateRate,
                 CentrePoint = config.Centre,
                 GridSize = config.WorldSize,
-                SystemToUse = config.SystemToUse
+                SystemToUse = config.SystemToUse,
+                ParticleSystem = particleWrapper.particleSystem,
+                PositionTexture = particleWrapper.positionTexture,
+                MaxParticles = particleWrapper.MaxParticles
             };
 
             worldSetupSystem.GenerateLifeSeed();

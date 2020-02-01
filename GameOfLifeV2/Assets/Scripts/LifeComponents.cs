@@ -35,11 +35,32 @@ namespace LifeComponents
     public struct AliveCell : IComponentData
     { }
 
+    public struct ParticleSystemWrapper : ISharedComponentData, IEquatable<ParticleSystemWrapper>
+    {
+        public GameObject particleSystem;
+        public Texture2D positionTexture;
+        public int MaxParticles;
+        public bool Equals(ParticleSystemWrapper other)
+        {
+            return other.particleSystem.Equals(particleSystem) 
+                && other.positionTexture.Equals(positionTexture)
+                && other.MaxParticles == MaxParticles;
+        }
+
+        public new int GetHashCode()
+        {
+            return particleSystem.GetHashCode() + positionTexture.GetHashCode() + MaxParticles;
+        }
+    }
+
     public struct WorldDetails : ISharedComponentData, IEquatable<WorldDetails>
     {
         public Entity AliveRenderer;
         public Entity DeadRenderer;
         public WorldUpdateDetails updateDetails;
+        public GameObject particleSystem;
+        public Texture2D positionTexture;
+        public int maxParticles;
 
         public bool Equals(WorldDetails other)
         {
@@ -70,4 +91,9 @@ namespace LifeComponents
     public struct WorldUpdateTracker : IComponentData { };
 
     public class LifeUpdateGroup : ComponentSystemGroup { }
+
+    public struct NewLife : IComponentData 
+    {
+        public Entity worldEntity;
+    };
 }

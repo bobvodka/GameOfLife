@@ -4,7 +4,6 @@ using Unity.Mathematics;
 
 using LifeComponents;
 using Unity.Transforms;
-using System.Collections.Generic;
 
 public class WorldSetup
 {
@@ -20,6 +19,11 @@ public class WorldSetup
     public float3 CentrePoint { get; set; }
     public int2 GridSize { get; set; }
     public UpdateSystem SystemToUse { get; set; }
+
+    public UnityEngine.GameObject ParticleSystem { get; set; }
+
+    public UnityEngine.Texture2D PositionTexture { get; set; }
+    public int MaxParticles { get; set; }
 
     struct StartPatternStamp
     {
@@ -49,7 +53,10 @@ public class WorldSetup
             {
                 DeadRenderer = DeadCellPrefab,
                 AliveRenderer = AliveCellPrefab,
-                updateDetails = worldUpdateDetails
+                updateDetails = worldUpdateDetails,
+                particleSystem = ParticleSystem,
+                positionTexture = PositionTexture,
+                maxParticles = MaxParticles
             };
             
             entityManager.CreateEntity(cellArcheType, cells);

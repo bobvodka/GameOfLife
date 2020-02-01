@@ -1,4 +1,4 @@
-using Unity.Entities;
+﻿using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
 using LifeComponents;
@@ -41,18 +41,20 @@ namespace LifeUpdateSystem
             // filter entities.
             var removeCmds = cmdBufferSystem.CreateCommandBuffer();
 
-            foreach (var worldDetails in sharedComponentData)
+            foreach(var worldDetails in sharedComponentData)
             {
-
                 updateFinder.SetSharedComponentFilter(worldDetails);
                 if (updateFinder.CalculateEntityCount() == 0)
                     continue;
               
                 // Grab a command buffer for this update function to store commands in
                 var cmds = cmdBufferSystem.CreateCommandBuffer().ToConcurrent();
+                var particleCmds = cmdBufferSystem.CreateCommandBuffer().ToConcurrent();
 
                 // And grab the component data for the entities with AliveCells attached
                 var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
+
+                var updateFilter = updateFinder.GetSingletonEntity();
 
                 // We need to make a local copy of the entity IDs for the renderable
                 // prefabs as we can't access worldDetails directly in the lambda as
@@ -61,6 +63,7 @@ namespace LifeUpdateSystem
                 Entity AliveRenderer = worldDetails.AliveRenderer;
 
                 var updateHandle = Entities
+                    .WithName("World Update : Threaded")
                     .WithSharedComponentFilter(worldDetails)
                     .WithReadOnly(aliveCells)
                     .ForEach((Entity entity, int entityInQueryIndex,
@@ -107,21 +110,25 @@ namespace LifeUpdateSystem
                         cmds.AddComponent(entityInQueryIndex, entity, new AliveCell { });
 
                         // and then do a couple of flips of data so that the rendering is in sync
-                        cmds.SetComponent(entityInQueryIndex, entity, new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) });
+                        var location = new Translation { Value = translation.Value + new float3(.0f, 1.0f, .0f) };
+                        cmds.SetComponent(entityInQueryIndex, entity, location);
 
                         // clean up the old mesh value and swap to the new renderable
                         var renderable = cmds.Instantiate(entityInQueryIndex, AliveRenderer);
                         cmds.AddComponent(entityInQueryIndex, renderable, new Parent { Value = entity });
                         cmds.DestroyEntity(entityInQueryIndex, mesh.value);
+
+                        // Tag that we want a particle system
+                        var particles = particleCmds.CreateEntity(entityInQueryIndex);
+                        particleCmds.AddComponent(entityInQueryIndex, particles, new NewLife { worldEntity = updateFilter });
+                        particleCmds.AddComponent(entityInQueryIndex, particles, location );
                     }
 
                 }).Schedule(inputDeps);
 
-
                 cmdBufferSystem.AddJobHandleForProducer(updateHandle);
                 updateJobs = JobHandle.CombineDependencies(updateJobs, updateHandle);
-
-                var updateFilter = updateFinder.GetSingletonEntity();
+                                
                 removeCmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
             }
 

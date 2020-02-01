@@ -162,6 +162,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 1
+  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+    type: 3}
+  MaxParticles: 256
 --- !u!4 &279589194
 Transform:
   m_ObjectHideFlags: 0
@@ -210,13 +213,16 @@ MonoBehaviour:
     x: 40
     y: 20
   WorldSeed: 4294967295
-  WorldUpdateRate: 0.05
+  WorldUpdateRate: 0.5
   LimitUpdateRate: 1
   AliveCell: {fileID: 3847614416280935281, guid: f46aaebd69ff54e21a30a3cda583f2a3,
     type: 3}
   DeadCell: {fileID: 8900287776395129279, guid: 527009245a75b47baae5abdeb6f23d76,
     type: 3}
   SystemToUse: 1
+  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+    type: 3}
+  MaxParticles: 256
 --- !u!4 &321224046
 Transform:
   m_ObjectHideFlags: 0
@@ -272,6 +278,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 0
+  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+    type: 3}
+  MaxParticles: 256
 --- !u!4 &1370529715
 Transform:
   m_ObjectHideFlags: 0
@@ -327,6 +336,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 0
+  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+    type: 3}
+  MaxParticles: 256
 --- !u!4 &1484661167
 Transform:
   m_ObjectHideFlags: 0
