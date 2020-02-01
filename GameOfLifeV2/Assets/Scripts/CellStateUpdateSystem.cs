@@ -34,7 +34,7 @@ namespace LifeUpdateSystem
             var commandBuffer = renderSyncCmdBufferSystem.CreateCommandBuffer().ToConcurrent();
 
             var rendererSyncJob = Entities.WithNone<LocalToParent>()
-                .WithName("Sync Renderable Data")
+                .WithName("SyncRenderableData")
                 .ForEach((in int entityInQueryIndex, in Entity renderable, in Parent parentCell) =>
                 {
                     commandBuffer.AddComponent(entityInQueryIndex, parentCell.Value, new Renderable { value = renderable });

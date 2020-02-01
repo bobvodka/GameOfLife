@@ -4,6 +4,7 @@ using Unity.Mathematics;
 
 using LifeComponents;
 using Unity.Transforms;
+using UnityEngine.VFX;
 
 public class WorldSetup
 {
@@ -55,6 +56,7 @@ public class WorldSetup
                 AliveRenderer = AliveCellPrefab,
                 updateDetails = worldUpdateDetails,
                 particleSystem = ParticleSystem,
+                vfx = ParticleSystem.GetComponent<VisualEffect>(),
                 positionTexture = PositionTexture,
                 maxParticles = MaxParticles
             };

@@ -51,7 +51,7 @@ namespace LifeUpdateSystem
                     var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
                     Entities
-                        .WithName("World Update : No Threads")
+                        .WithName("WorldUpdateNoThreads")
                         .WithSharedComponentFilter(worldDetails)
                         .ForEach((Entity entity, in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                     {

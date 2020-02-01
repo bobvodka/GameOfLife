@@ -2,6 +2,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.VFX;
 
 namespace LifeComponents
 {
@@ -59,6 +60,7 @@ namespace LifeComponents
         public Entity DeadRenderer;
         public WorldUpdateDetails updateDetails;
         public GameObject particleSystem;
+        public VisualEffect vfx;
         public Texture2D positionTexture;
         public int maxParticles;
 

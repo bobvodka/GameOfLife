@@ -68,6 +68,9 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             MaxParticles = MaxParticles
         };
         shared.particleSystem.GetComponent<VisualEffect>().SetTexture("particlePositions", shared.positionTexture);
+        var extents = new float3(this.WorldSize.x / 2.0f, 5.0f, this.WorldSize.y / 2.0f);
+        shared.particleSystem.GetComponent<VisualEffect>().SetVector3("Centre", this.transform.position);
+        shared.particleSystem.GetComponent<VisualEffect>().SetVector3("Extent", extents);
 
         dstManager.AddSharedComponentData(entity, shared);
     }
@@ -97,7 +100,7 @@ public class LifeConfigSystem : JobComponentSystem
             );
 
         Entities.WithStructuralChanges()
-            .WithName("World Generation")
+            .WithName("WorldGeneration")
             .WithStoreEntityQueryInField(ref setupQuery)
             .WithoutBurst()
             .ForEach((Entity entity, in GameOfLifeConfig config) =>

@@ -63,7 +63,7 @@ namespace LifeUpdateSystem
                 Entity AliveRenderer = worldDetails.AliveRenderer;
 
                 var updateHandle = Entities
-                    .WithName("World Update : Threaded")
+                    .WithName("WorldUpdateThreaded")
                     .WithSharedComponentFilter(worldDetails)
                     .WithReadOnly(aliveCells)
                     .ForEach((Entity entity, int entityInQueryIndex,
