@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using Unity.Entities;
+using Unity.Collections;
 using Unity.Mathematics;
 using System.Collections.Generic;
 using Unity.Jobs;
@@ -8,6 +9,7 @@ using Unity.Transforms;
 using LifeComponents;
 
 using UnityEngine.VFX;
+using UnityEditor;
 
 public struct GameOfLifeConfig : IComponentData
 {
@@ -20,6 +22,8 @@ public struct GameOfLifeConfig : IComponentData
     public Entity DeadCell;
     public float3 Centre;
     public UpdateSystem SystemToUse;
+    public NativeString512 particleAsset;
+    public int MaxParticles;
 }
 
 public enum UpdateSystem
@@ -44,6 +48,11 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
+        // As we can't store the particle system directly on conversion
+        // we are just going to store the path in the asset database
+        // and extract it later to load
+        var assetLocation = AssetDatabase.GetAssetPath(particles);
+
         var data = new GameOfLifeConfig()
 
         {
@@ -55,24 +64,12 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             AliveCell = conversionSystem.GetPrimaryEntity(this.AliveCell),
             DeadCell = conversionSystem.GetPrimaryEntity(this.DeadCell),
             Centre = this.transform.position,
-            SystemToUse = this.SystemToUse
+            SystemToUse = this.SystemToUse,
+            particleAsset = new NativeString512(assetLocation),
+            MaxParticles = MaxParticles
         };
 
         dstManager.AddComponentData(entity, data);
-
-        var shared = new ParticleSystemWrapper()
-        {
-            //particleSystem = particles
-            particleSystem = UnityEngine.GameObject.Instantiate(particles, Vector3.zero, UnityEngine.Quaternion.identity),
-            positionTexture = new Texture2D(MaxParticles, 1, TextureFormat.RGFloat, false),
-            MaxParticles = MaxParticles
-        };
-        shared.particleSystem.GetComponent<VisualEffect>().SetTexture("particlePositions", shared.positionTexture);
-        var extents = new float3(this.WorldSize.x / 2.0f, 5.0f, this.WorldSize.y / 2.0f);
-        shared.particleSystem.GetComponent<VisualEffect>().SetVector3("Centre", this.transform.position);
-        shared.particleSystem.GetComponent<VisualEffect>().SetVector3("Extent", extents);
-
-        dstManager.AddSharedComponentData(entity, shared);
     }
 
     public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
@@ -105,8 +102,6 @@ public class LifeConfigSystem : JobComponentSystem
             .WithoutBurst()
             .ForEach((Entity entity, in GameOfLifeConfig config) =>
         {
-            var particleWrapper = EntityManager.GetSharedComponentData<ParticleSystemWrapper>(entity);
-
             var worldSetupSystem = new WorldSetup()
             {
                 WorldSeed = config.WorldSeed,
@@ -120,9 +115,8 @@ public class LifeConfigSystem : JobComponentSystem
                 CentrePoint = config.Centre,
                 GridSize = config.WorldSize,
                 SystemToUse = config.SystemToUse,
-                ParticleSystem = particleWrapper.particleSystem,
-                PositionTexture = particleWrapper.positionTexture,
-                MaxParticles = particleWrapper.MaxParticles
+                ParticleAsset = config.particleAsset,
+                MaxParticles = config.MaxParticles
             };
 
             worldSetupSystem.GenerateLifeSeed();

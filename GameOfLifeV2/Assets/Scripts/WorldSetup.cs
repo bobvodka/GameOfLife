@@ -5,6 +5,7 @@ using Unity.Mathematics;
 using LifeComponents;
 using Unity.Transforms;
 using UnityEngine.VFX;
+using UnityEngine;
 
 public class WorldSetup
 {
@@ -21,9 +22,13 @@ public class WorldSetup
     public int2 GridSize { get; set; }
     public UpdateSystem SystemToUse { get; set; }
 
+    /*
     public UnityEngine.GameObject ParticleSystem { get; set; }
 
     public UnityEngine.Texture2D PositionTexture { get; set; }
+    */
+
+    public NativeString512 ParticleAsset { get; set; }
     public int MaxParticles { get; set; }
 
     struct StartPatternStamp
@@ -50,14 +55,28 @@ public class WorldSetup
                 lastUpdateTime = this.WorldUpdateRate
             };
 
+            // Load and setup the particle system for this world/grid
+            var particleSystemPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ParticleAsset.ToString());
+            var particleSystem = GameObject.Instantiate(particleSystemPrefab);
+            var vfxSystem = particleSystem.GetComponent<VisualEffect>();
+
+            // Generate the texture required to sort the position data in it
+            var positionData = new Texture2D(MaxParticles, 1, TextureFormat.RGFloat, false);          
+            vfxSystem.SetTexture("particlePositions", positionData);
+
+            // Setup some extents so that the system will simulate/render correctly
+            vfxSystem.SetVector3("Centre", CentrePoint);
+            var extents = new float3(GridSize.x / 2.0f, 5.0f, GridSize.y / 2.0f);
+            vfxSystem.SetVector3("Extent", extents);
+
             var worldDetails = new WorldDetails()
             {
                 DeadRenderer = DeadCellPrefab,
                 AliveRenderer = AliveCellPrefab,
                 updateDetails = worldUpdateDetails,
-                particleSystem = ParticleSystem,
-                vfx = ParticleSystem.GetComponent<VisualEffect>(),
-                positionTexture = PositionTexture,
+                particleSystem = particleSystem,
+                vfx = vfxSystem,
+                positionTexture = positionData,
                 maxParticles = MaxParticles
             };
             
