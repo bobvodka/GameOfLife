@@ -126,7 +126,7 @@ namespace LifeUpdateSystem
                     .WithReadOnly(sortedIndices)
                     .WithNativeDisableContainerSafetyRestriction(locations)
                     .WithName("FillPositionTexture")
-                    .Schedule(new JobHandle());
+                    .Schedule(default);
                 
 
                 fillJobs = JobHandle.CombineDependencies(fillJob, fillJobs);

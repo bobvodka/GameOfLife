@@ -1,11 +1,12 @@
 {
   "dependencies": {
-    "com.unity.burst": "1.2.1",
+    "com.unity.burst": "1.2.3",
     "com.unity.collab-proxy": "1.2.16",
-    "com.unity.collections": "0.5.1-preview.11",
-    "com.unity.entities": "0.5.1-preview.11",
+    "com.unity.collections": "0.5.2-preview.8",
+    "com.unity.entities": "0.6.0-preview.24",
     "com.unity.ide.rider": "1.1.4",
     "com.unity.ide.vscode": "1.1.4",
+    "com.unity.platforms": "0.2.1-preview.2",
     "com.unity.recorder": "2.1.0-preview.1",
     "com.unity.render-pipelines.core": "7.1.8",
     "com.unity.render-pipelines.high-definition": "7.1.8",
