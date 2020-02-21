@@ -14,7 +14,7 @@ namespace LifeUpdateSystem
     [AlwaysSynchronizeSystem]
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(CellStateUpdateCommandBufferSystem))]
-    public class ParticleSpawnerSystem : JobComponentSystem
+    public class ParticleSpawnerSystem : SystemBase
     {
         EntityQuery particleQuery;
 
@@ -33,9 +33,9 @@ namespace LifeUpdateSystem
             MaxParticlesID = UnityEngine.Shader.PropertyToID("MaxParticles");
         }
 
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnUpdate()
         {
-            particleQuery.AddDependency(inputDeps);
+            particleQuery.AddDependency(Dependency);
             int entityCount = particleQuery.CalculateEntityCount();
 
             // Do a sweap over all the entities and extract an entity which matches the "world" they are in
@@ -51,7 +51,7 @@ namespace LifeUpdateSystem
                     sharedEntityDetails[entityInQueryIndex] = lifeDetails.worldEntity;
                     entityLocations[entityInQueryIndex] = new float2(location.Value.x, location.Value.z);
 
-                }).Schedule(inputDeps);
+                }).ScheduleParallel(Dependency);
 
             // Next we schedule a job to process the sharedEntityDetails, i.e. the entity which indicates which world
             // a particle is spawning in.
@@ -59,6 +59,7 @@ namespace LifeUpdateSystem
             var groupedEntities = new NativeArraySharedValues<Entity>(sharedEntityDetails, Allocator.TempJob);
             var sortEntities = groupedEntities.Schedule(groupEntitiesJob);
 
+            // Sync point to ensure all the above has completed
             sortEntities.Complete();
 
             // At this point we have a grouping data for all the unique types
@@ -77,7 +78,6 @@ namespace LifeUpdateSystem
             var particleDetails = new List<ParticleDetails>(countPerSharedValue.Length);
 
             // Particle Spawning is a 3 step process
-
 
             // Step 1.
             // For each 'world' we need to get
@@ -156,8 +156,6 @@ namespace LifeUpdateSystem
             // This ensure we destory all the entities we created to spawn things so that we don't keep spawning
             // particles.
             EntityManager.DestroyEntity(particleQuery);
-
-            return default;
 
         }
     }

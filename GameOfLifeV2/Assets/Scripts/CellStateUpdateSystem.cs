@@ -19,7 +19,7 @@ namespace LifeUpdateSystem
     [AlwaysSynchronizeSystem]
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(CellStateUpdateCommandBufferSystem))]
-    public class RenderingEntitySyncSystem : JobComponentSystem
+    public class RenderingEntitySyncSystem : SystemBase
     {
         CellRendererUpdateCommandBufferSystem renderSyncCmdBufferSystem;
 
@@ -28,22 +28,21 @@ namespace LifeUpdateSystem
             renderSyncCmdBufferSystem = World.GetOrCreateSystem<CellRendererUpdateCommandBufferSystem>();
         }
 
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnUpdate()
         {
 
             var commandBuffer = renderSyncCmdBufferSystem.CreateCommandBuffer().ToConcurrent();
 
-            var rendererSyncJob = Entities.WithNone<LocalToParent>()
+            Entities.WithNone<LocalToParent>()
                 .WithName("SyncRenderableData")
                 .ForEach((in int entityInQueryIndex, in Entity renderable, in Parent parentCell) =>
                 {
                     commandBuffer.AddComponent(entityInQueryIndex, parentCell.Value, new Renderable { value = renderable });
                     commandBuffer.AddComponent(entityInQueryIndex, renderable, new LocalToParent());
-                }).Schedule(inputDeps);
+                }).ScheduleParallel();
 
-            renderSyncCmdBufferSystem.AddJobHandleForProducer(rendererSyncJob);
-
-            return rendererSyncJob;
+            // Above updates the Depenency property for us, so we can use it for the command buffer system
+            renderSyncCmdBufferSystem.AddJobHandleForProducer(Dependency);
         }
     };
 }

@@ -10,7 +10,7 @@ namespace LifeUpdateSystem
 {
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
-    public class LifeUpdateSystemMultiThread : JobComponentSystem
+    public class LifeUpdateSystemMultiThread : SystemBase
     {
 
         EntityQuery updateFinder;
@@ -29,7 +29,7 @@ namespace LifeUpdateSystem
             cmdBufferSystem = World.GetOrCreateSystem<CellStateUpdateCommandBufferSystem>();
         }
 
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnUpdate()
         {
 
             // Grab any and all render details in the world
@@ -124,7 +124,7 @@ namespace LifeUpdateSystem
                         particleCmds.AddComponent(entityInQueryIndex, particles, location );
                     }
 
-                }).Schedule(inputDeps);
+                }).ScheduleParallel(Dependency);
 
                 cmdBufferSystem.AddJobHandleForProducer(updateHandle);
                 updateJobs = JobHandle.CombineDependencies(updateJobs, updateHandle);
@@ -132,7 +132,8 @@ namespace LifeUpdateSystem
                 removeCmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
             }
 
-            return updateJobs;
+            // Export the dependency ourselves with the combined handles
+            Dependency = updateJobs;
         }
     }
 }

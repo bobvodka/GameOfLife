@@ -10,7 +10,7 @@ namespace LifeUpdateSystem
 
     [UpdateInGroup(typeof(LifeUpdateGroup))]
     [UpdateAfter(typeof(GameOfLifeWorldUpdateSystem))]
-    public class LifeUpdateSystemSingleThread : JobComponentSystem
+    public class LifeUpdateSystemSingleThread : SystemBase
     {
         EntityQuery updateFinder;
 
@@ -30,7 +30,7 @@ namespace LifeUpdateSystem
             commandBufferSystem = World.GetOrCreateSystem<CellStateUpdateCommandBufferSystem>();
         }
 
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnUpdate()
         {
             // Grab a command buffer so that we can queue update commands
             var cmds = commandBufferSystem.CreateCommandBuffer();
@@ -50,6 +50,9 @@ namespace LifeUpdateSystem
 
                     var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
+                    // The following code will be executed on the main thread
+                    // so doesn't need to sync anything or return JobHandles for anyone
+                    // else to sync on
                     Entities
                         .WithName("WorldUpdateNoThreads")
                         .WithSharedComponentFilter(worldDetails)
@@ -111,8 +114,6 @@ namespace LifeUpdateSystem
                     cmds.RemoveComponent<ShouldUpdateTag>(updateFilter);
                 }                
             }
-
-            return inputDeps;
         }
     }
 }

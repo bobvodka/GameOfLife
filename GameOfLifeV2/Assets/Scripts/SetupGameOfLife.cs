@@ -80,11 +80,11 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
 }
 
 [AlwaysSynchronizeSystem]
-public class LifeConfigSystem : JobComponentSystem
+public class LifeConfigSystem : SystemBase
 {
     private EntityQuery setupQuery;
 
-    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    protected override void OnUpdate()
     {
 
         var archeType = EntityManager.CreateArchetype
@@ -124,7 +124,5 @@ public class LifeConfigSystem : JobComponentSystem
 
         // Then delete all the entities so that the update doesn't run again
         EntityManager.DestroyEntity(setupQuery);
-        
-        return default;
     }
 }
