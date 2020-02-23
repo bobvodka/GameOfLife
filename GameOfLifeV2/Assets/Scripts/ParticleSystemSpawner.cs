@@ -20,11 +20,9 @@ namespace LifeUpdateSystem
 
         struct ParticleDetails
         {
-            public NativeArray<float2> locations;
-            public int readOffset;
-            public int particleCount;
-            public Texture2D positionTexture;
-            public VisualEffect vfx;
+            public Texture2D PositionTexture;
+            public VisualEffect Vfx;
+            public int ParticleCount;
         }
 
         int MaxParticlesID;
@@ -77,49 +75,36 @@ namespace LifeUpdateSystem
             // as we'll be processing this data a couple of times
             var particleDetails = new List<ParticleDetails>(countPerSharedValue.Length);
 
-            // Particle Spawning is a 3 step process
+            // Particle Spawning is a 2 step process
 
             // Step 1.
             // For each 'world' we need to get
             // - the number of particles we want to spawn (needed to limit data copying)
-            // - a NativeArray pointing to the texture data we want to update/write
+            // - a reference to the position texture we need to push the updates to
+            // - a NativeArray pointing to the texture data we want to update/write 
             // - a reference to the Vfx system we want to spawn later
+            //
+            // The vfx world and position texture are cached for the next step as they come from an entity query
+            // and the NativeArray pointing to the texture data is used in a job which copies the X/Z location of each
+            // spawn point so we can use it in the particle system.
+
             int offset = 0;
+            JobHandle fillJobs = default;
             foreach (var count in countPerSharedValue)
             {
                 var sharedIdx = sortedIndices[offset];
                 var worldDetails = EntityManager.GetSharedComponentData<WorldDetails>(sharedEntityDetails[sharedIdx]);
 
-                particleDetails.Add(new ParticleDetails
-                {
-                    locations = worldDetails.positionTexture.GetRawTextureData<float2>(),
-                    vfx = worldDetails.vfx,
-                    positionTexture = worldDetails.positionTexture,
-                    particleCount = math.min(count, worldDetails.maxParticles),
-                    readOffset = offset
-                });
+                var locations = worldDetails.positionTexture.GetRawTextureData<float2>();
+                var particleCount = math.min(count, worldDetails.maxParticles);
 
-                offset += count;
-            }
-            
-            // Step 2. 
-            // Data copying jobs
-
-            // For each 'world' we kick off a job using our data cached from above to copy data from the 
-            // the array we created earlier with all the locations, in to the texture for this world.
-            JobHandle fillJobs = default;
-            foreach(var details in particleDetails)
-            {
-                var locations = details.locations;
-                var particleCount = details.particleCount;
-                var readOffset = details.readOffset;
-
+                // Data copying job
                 var fillJob = Job
                     .WithCode(() =>
                     {
                         for (int idx = 0; idx < particleCount; ++idx)
                         {
-                            locations[idx] = entityLocations[sortedIndices[idx + readOffset]];
+                            locations[idx] = entityLocations[sortedIndices[idx + offset]];
                         }
                     })
                     .WithReadOnly(entityLocations)
@@ -127,25 +112,33 @@ namespace LifeUpdateSystem
                     .WithNativeDisableContainerSafetyRestriction(locations)
                     .WithName("FillPositionTexture")
                     .Schedule(default);
-                
 
                 fillJobs = JobHandle.CombineDependencies(fillJob, fillJobs);
+
+                particleDetails.Add(new ParticleDetails
+                {
+                    Vfx = worldDetails.vfx,
+                    PositionTexture = worldDetails.positionTexture,
+                    ParticleCount = particleCount
+                });
+
+                offset += count;
             }
 
-            // Finally we have to wait for all that copy work to complete
+            // We now have to wait for all that copy work to complete
             fillJobs.Complete();
 
-            // Step 3.
-            // Finally we spawn things.
+            // Step 2.
+            // We spawn things.
             // This is done by updating the data in the source texture, which was written in the job above,
             // and then using the Vfx component to tell the particle system how many particles to spawn
             // and start if off.
             // The texture was already bound on startup and so we don't have to rebind that at this point.
             foreach (var details in particleDetails)
             {
-                details.positionTexture.Apply(updateMipmaps: false);
-                details.vfx.SetInt(MaxParticlesID, details.particleCount);
-                details.vfx.Play();
+                details.PositionTexture.Apply(updateMipmaps: false);
+                details.Vfx.SetInt(MaxParticlesID, details.ParticleCount);
+                details.Vfx.Play();
             }
             
             // Clean up NativeArrays etc we allocated.
