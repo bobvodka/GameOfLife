@@ -77,7 +77,7 @@ namespace LifeUpdateSystem
                         // use Burst to improve the performance here
                         if (aliveCells.Exists(entity))
                         {
-                            if (!(aliveCount == 2 || aliveCount == 3))
+                            if (worldDetails.shouldDie.Invoke(aliveCount))
                             {
                                 // Components still can't be removed while iterating, however for this system we can use the
                                 // command buffer we created earlier which will be executed once this system has got done running.
@@ -92,7 +92,7 @@ namespace LifeUpdateSystem
                                 cmds.DestroyEntity(mesh.value);
                             }
                         }
-                        else if (aliveCount == 3)
+                        else if (worldDetails.shouldComeToLifeDie.Invoke(aliveCount))
                         {
                             // Add the alive tag
                             cmds.AddComponent(entity, new AliveCell { });

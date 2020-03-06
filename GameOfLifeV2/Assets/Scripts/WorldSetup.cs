@@ -7,6 +7,8 @@ using Unity.Transforms;
 using UnityEngine.VFX;
 using UnityEngine;
 
+using GameOfLife;
+
 public class WorldSetup
 {
 
@@ -30,6 +32,8 @@ public class WorldSetup
 
     public NativeString512 ParticleAsset { get; set; }
     public int MaxParticles { get; set; }
+
+    public GameRules.RuleSet RuleSet { get; set; }
 
     struct StartPatternStamp
     {
@@ -69,6 +73,8 @@ public class WorldSetup
             var extents = new float3(GridSize.x / 2.0f, 5.0f, GridSize.y / 2.0f);
             vfxSystem.SetVector3("Extent", extents);
 
+            var (shouldDieFunction, shouldComeToLifeFunction) = GameRules.GetRuleFunctions(RuleSet);
+
             var worldDetails = new WorldDetails()
             {
                 DeadRenderer = DeadCellPrefab,
@@ -77,7 +83,9 @@ public class WorldSetup
                 particleSystem = particleSystem,
                 vfx = vfxSystem,
                 positionTexture = positionData,
-                maxParticles = MaxParticles
+                maxParticles = MaxParticles,
+                shouldDie = shouldDieFunction,
+                shouldComeToLifeDie = shouldComeToLifeFunction
             };
             
             entityManager.CreateEntity(cellArcheType, cells);

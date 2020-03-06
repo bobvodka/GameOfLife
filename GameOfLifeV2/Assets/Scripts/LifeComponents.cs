@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -63,6 +64,8 @@ namespace LifeComponents
         public VisualEffect vfx;
         public Texture2D positionTexture;
         public int maxParticles;
+        public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldDie;
+        public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldComeToLifeDie;
 
         public bool Equals(WorldDetails other)
         {

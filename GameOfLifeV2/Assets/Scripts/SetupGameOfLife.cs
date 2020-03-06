@@ -10,6 +10,7 @@ using LifeComponents;
 
 using UnityEngine.VFX;
 using UnityEditor;
+using GameOfLife;
 
 public struct GameOfLifeConfig : IComponentData
 {
@@ -24,6 +25,7 @@ public struct GameOfLifeConfig : IComponentData
     public UpdateSystem SystemToUse;
     public NativeString512 particleAsset;
     public int MaxParticles;
+    public GameRules.RuleSet ruleSet;
 }
 
 public enum UpdateSystem
@@ -32,7 +34,7 @@ public enum UpdateSystem
     MultiThreaded
 }
 
-[ConverterVersion(userName: "robj", version: 1)]
+[ConverterVersion(userName: "robj", version: 2)]
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
 {
     public int NumberOfStartingSeeds = 12;
@@ -45,6 +47,7 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public UpdateSystem SystemToUse;
     public GameObject particles;
     public int MaxParticles;
+    public GameRules.RuleSet RuleSet;
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
@@ -66,7 +69,8 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             Centre = this.transform.position,
             SystemToUse = this.SystemToUse,
             particleAsset = new NativeString512(assetLocation),
-            MaxParticles = MaxParticles
+            MaxParticles = MaxParticles,
+            ruleSet = RuleSet
         };
 
         dstManager.AddComponentData(entity, data);
@@ -116,7 +120,8 @@ public class LifeConfigSystem : SystemBase
                 GridSize = config.WorldSize,
                 SystemToUse = config.SystemToUse,
                 ParticleAsset = config.particleAsset,
-                MaxParticles = config.MaxParticles
+                MaxParticles = config.MaxParticles,
+                RuleSet = config.ruleSet
             };
 
             worldSetupSystem.GenerateLifeSeed();

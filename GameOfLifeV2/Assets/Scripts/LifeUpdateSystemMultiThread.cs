@@ -61,6 +61,8 @@ namespace LifeUpdateSystem
                 // it's a managed type.
                 Entity DeadRenderer = worldDetails.DeadRenderer;
                 Entity AliveRenderer = worldDetails.AliveRenderer;
+                var shouldComeToLife = worldDetails.shouldComeToLifeDie;
+                var shouldDie = worldDetails.shouldDie;
 
                 var updateHandle = Entities
                     .WithName("WorldUpdateThreaded")
@@ -90,7 +92,7 @@ namespace LifeUpdateSystem
                     // for later execution
                     if (aliveCells.Exists(entity))
                     {
-                        if (!(aliveCount == 2 || aliveCount == 3))
+                        if (shouldDie.Invoke(aliveCount))
                         {
                             // Components still can't be removed while iterating, however for this system we can use the
                             // command buffer we created earlier which will be executed once this update system has finished running.
@@ -104,7 +106,7 @@ namespace LifeUpdateSystem
                             cmds.DestroyEntity(entityInQueryIndex, mesh.value);
                         }
                     }
-                    else if (aliveCount == 3)
+                    else if (shouldComeToLife.Invoke(aliveCount))
                     {
                         // Add the alive tag
                         cmds.AddComponent(entityInQueryIndex, entity, new AliveCell { });
