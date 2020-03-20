@@ -121,6 +121,65 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &10513274
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 10513276}
+  - component: {fileID: 10513275}
+  m_Layer: 0
+  m_Name: Big WorldGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &10513275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 10513274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f48b812b6fa4a9ca1b8bd4fcb139fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NumberOfStartingSeeds: 20
+  WorldSize:
+    x: 100
+    y: 100
+  WorldSeed: 4294967295
+  WorldUpdateRate: 0.5
+  LimitUpdateRate: 1
+  AliveCell: {fileID: 3847614416280935281, guid: f46aaebd69ff54e21a30a3cda583f2a3,
+    type: 3}
+  DeadCell: {fileID: 8900287776395129279, guid: 527009245a75b47baae5abdeb6f23d76,
+    type: 3}
+  SystemToUse: 1
+  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+    type: 3}
+  MaxParticles: 256
+  RuleSet: 8
+--- !u!4 &10513276
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 10513274}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &279589192
 GameObject:
   m_ObjectHideFlags: 0
