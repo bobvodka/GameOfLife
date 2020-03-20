@@ -51,9 +51,6 @@ namespace LifeUpdateSystem
                 var cmds = cmdBufferSystem.CreateCommandBuffer().ToConcurrent();
                 var particleCmds = cmdBufferSystem.CreateCommandBuffer().ToConcurrent();
 
-                // And grab the component data for the entities with AliveCells attached
-                var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
-
                 var updateFilter = updateFinder.GetSingletonEntity();
 
                 // We need to make a local copy of the entity IDs for the renderable
@@ -67,7 +64,6 @@ namespace LifeUpdateSystem
                 var updateHandle = Entities
                     .WithName("WorldUpdateThreaded")
                     .WithSharedComponentFilter(worldDetails)
-                    .WithReadOnly(aliveCells)
                     .ForEach((Entity entity, int entityInQueryIndex,
                     in Renderable mesh, in LifeCell lifeCell, in DynamicBuffer<EntityElement> buffer, in Translation translation) =>
                 {
@@ -80,7 +76,7 @@ namespace LifeUpdateSystem
 
                         // Check in the component data array to see if our
                         // neighbour is alive or not
-                        if (aliveCells.Exists(neighbour))
+                        if (HasComponent<AliveCell>(neighbour))
                         {
                             aliveCount++;
                         }
@@ -90,7 +86,7 @@ namespace LifeUpdateSystem
                     // die or come to life as required.
                     // As we are executing on multiple threads we need to store the changes in the command buffer
                     // for later execution
-                    if (aliveCells.Exists(entity))
+                    if(HasComponent<AliveCell>(entity))
                     {
                         if (shouldDie.Invoke(aliveCount))
                         {
