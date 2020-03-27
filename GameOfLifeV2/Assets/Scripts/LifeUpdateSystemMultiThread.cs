@@ -60,6 +60,7 @@ namespace LifeUpdateSystem
                 Entity AliveRenderer = worldDetails.AliveRenderer;
                 var shouldComeToLife = worldDetails.shouldComeToLifeDie;
                 var shouldDie = worldDetails.shouldDie;
+                bool shouldSpawnParticles = worldDetails.particleDetails.particleSystem != null;
 
                 var updateHandle = Entities
                     .WithName("WorldUpdateThreaded")
@@ -117,9 +118,12 @@ namespace LifeUpdateSystem
                         cmds.DestroyEntity(entityInQueryIndex, mesh.value);
 
                         // Tag that we want a particle system
-                        var particles = particleCmds.CreateEntity(entityInQueryIndex);
-                        particleCmds.AddComponent(entityInQueryIndex, particles, new NewLife { worldEntity = updateFilter });
-                        particleCmds.AddComponent(entityInQueryIndex, particles, location );
+                        if (shouldSpawnParticles)
+                        {
+                            var particles = particleCmds.CreateEntity(entityInQueryIndex);
+                            particleCmds.AddComponent(entityInQueryIndex, particles, new NewLife { worldEntity = updateFilter });
+                            particleCmds.AddComponent(entityInQueryIndex, particles, location);
+                        }
                     }
 
                 }).ScheduleParallel(Dependency);

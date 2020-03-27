@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Particle Assets
+  m_EditorClassIdentifier: 
+  m_GroupName: Particle Assets
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 1a66f85d1d10388469542fb7ccf7ab5f
+  m_SerializeEntries:
+  - m_GUID: 2463efa99a2c2aa45a0766f34ef50be2
+    m_Address: Fireworks
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    m_mainAssetType: UnityEngine.GameObject, UnityEngine.CoreModule, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
+    m_MainAsset: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+      type: 3}
+    m_TargetAsset: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
+      type: 3}
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: bae2cad3fe1a27c43be48fc16a50b9f9, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 5a439ea43df3cec478e33c8e7f73f0c6, type: 2}
+    - {fileID: 11400000, guid: c29f4ee7ee20d244f8b3b74e7bdd7aff, type: 2}

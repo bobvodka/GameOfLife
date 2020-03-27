@@ -5,6 +5,8 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.VFX;
 
+using UnityEngine.ResourceManagement.AsyncOperations;
+
 namespace LifeComponents
 {
     // The basics of our 'life' in the system
@@ -60,10 +62,7 @@ namespace LifeComponents
         public Entity AliveRenderer;
         public Entity DeadRenderer;
         public WorldUpdateDetails updateDetails;
-        public GameObject particleSystem;
-        public VisualEffect vfx;
-        public Texture2D positionTexture;
-        public int maxParticles;
+        public WorldParticleDetails particleDetails;
         public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldDie;
         public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldComeToLifeDie;
 
@@ -89,6 +88,14 @@ namespace LifeComponents
         public float lastUpdateTime;
     }
 
+    public class WorldParticleDetails
+    {
+        public GameObject particleSystem;
+        public VisualEffect vfx;
+        public Texture2D positionTexture;
+        public int maxParticles;
+    }
+
     public struct SingleThreadUpdateTag : IComponentData { };
     public struct MultiThreadUpdateTag : IComponentData { };
 
@@ -101,4 +108,14 @@ namespace LifeComponents
     {
         public Entity worldEntity;
     };
+
+    public class AsyncRequestWorld : IComponentData
+    {
+        public WorldParticleDetails worldParticleDetails;
+        public AsyncOperationHandle<GameObject> particleGO;
+        public int MaxParticles;
+        public int2 GridSize;
+        public float3 CentrePoint;
+    }
+
 }

@@ -95,8 +95,8 @@ namespace LifeUpdateSystem
                 var sharedIdx = sortedIndices[offset];
                 var worldDetails = EntityManager.GetSharedComponentData<WorldDetails>(sharedEntityDetails[sharedIdx]);
 
-                var locations = worldDetails.positionTexture.GetRawTextureData<float2>();
-                var particleCount = math.min(count, worldDetails.maxParticles);
+                var locations = worldDetails.particleDetails.positionTexture.GetRawTextureData<float2>();
+                var particleCount = math.min(count, worldDetails.particleDetails.maxParticles);
 
                 // Data copying job
                 var fillJob = Job
@@ -117,8 +117,8 @@ namespace LifeUpdateSystem
 
                 particleDetails.Add(new ParticleDetails
                 {
-                    Vfx = worldDetails.vfx,
-                    PositionTexture = worldDetails.positionTexture,
+                    Vfx = worldDetails.particleDetails.vfx,
+                    PositionTexture = worldDetails.particleDetails.positionTexture,
                     ParticleCount = particleCount
                 });
 
