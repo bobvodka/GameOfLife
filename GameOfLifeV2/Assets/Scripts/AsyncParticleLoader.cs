@@ -1,15 +1,9 @@
-﻿using Unity.Burst;
-using Unity.Collections;
+﻿using LifeComponents;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
-using static Unity.Mathematics.math;
-
-using UnityEngine.VFX;
 using UnityEngine;
-
-using LifeComponents;
+using UnityEngine.VFX;
 
 [AlwaysSynchronizeSystem]
 public class AsyncParticleLoader : SystemBase

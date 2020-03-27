@@ -1,18 +1,13 @@
-﻿using UnityEngine;
-using Unity.Entities;
-using Unity.Collections;
-using Unity.Mathematics;
-using System.Collections.Generic;
-using Unity.Jobs;
-using Unity.Transforms;
-
+﻿using GameOfLife;
 using LifeComponents;
-
-using UnityEngine.VFX;
+using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Transforms;
+using UnityEngine;
 using Unity​Engine.AddressableAssets;
-
-using UnityEditor;
-using GameOfLife;
 
 public struct GameOfLifeConfig : IComponentData
 {
@@ -47,7 +42,6 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public GameObject AliveCell;
     public GameObject DeadCell;
     public UpdateSystem SystemToUse;
-    //public GameObject particles;
     public AssetReference particles;
     public int MaxParticles;
     public GameRules.RuleSet RuleSet;

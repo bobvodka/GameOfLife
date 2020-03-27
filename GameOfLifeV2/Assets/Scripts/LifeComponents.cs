@@ -3,9 +3,8 @@ using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.VFX;
-
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.VFX;
 
 namespace LifeComponents
 {
