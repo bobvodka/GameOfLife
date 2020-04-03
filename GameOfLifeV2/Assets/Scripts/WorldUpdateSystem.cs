@@ -1,7 +1,6 @@
-﻿using Unity.Entities;
-using Unity.Jobs;
-using LifeComponents;
+﻿using LifeComponents;
 using System.Collections.Generic;
+using Unity.Entities;
 
 [AlwaysSynchronizeSystem]
 [UpdateInGroup(typeof(LifeUpdateGroup))]

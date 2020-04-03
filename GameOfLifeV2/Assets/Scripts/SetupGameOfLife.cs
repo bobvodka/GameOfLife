@@ -1,16 +1,13 @@
-﻿using UnityEngine;
-using Unity.Entities;
-using Unity.Collections;
-using Unity.Mathematics;
-using System.Collections.Generic;
-using Unity.Jobs;
-using Unity.Transforms;
-
+﻿using GameOfLife;
 using LifeComponents;
-
-using UnityEngine.VFX;
-using UnityEditor;
-using GameOfLife;
+using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Transforms;
+using UnityEngine;
+using Unity​Engine.AddressableAssets;
 
 public struct GameOfLifeConfig : IComponentData
 {
@@ -34,7 +31,7 @@ public enum UpdateSystem
     MultiThreaded
 }
 
-[ConverterVersion(userName: "robj", version: 2)]
+[ConverterVersion(userName: "robj", version: 3)]
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
 {
     public int NumberOfStartingSeeds = 12;
@@ -45,7 +42,7 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public GameObject AliveCell;
     public GameObject DeadCell;
     public UpdateSystem SystemToUse;
-    public GameObject particles;
+    public AssetReference particles;
     public int MaxParticles;
     public GameRules.RuleSet RuleSet;
 
@@ -54,8 +51,7 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
         // As we can't store the particle system directly on conversion
         // we are just going to store the path in the asset database
         // and extract it later to load
-        var assetLocation = AssetDatabase.GetAssetPath(particles);
-
+        var assetLocation = particles.AssetGUID;
         var data = new GameOfLifeConfig()
 
         {

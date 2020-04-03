@@ -1,13 +1,10 @@
-﻿using Unity.Collections;
+﻿using GameOfLife;
+using LifeComponents;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-
-using LifeComponents;
 using Unity.Transforms;
-using UnityEngine.VFX;
-using UnityEngine;
-
-using GameOfLife;
+using Unity​Engine.AddressableAssets;
 
 public class WorldSetup
 {
@@ -41,6 +38,31 @@ public class WorldSetup
         public int2 location;
     }
 
+    private WorldParticleDetails SetupParticleSystem()
+    {
+        var particleDetails = new WorldParticleDetails
+        {
+            maxParticles = MaxParticles
+        };
+
+        var particleRef = new AssetReference(ParticleAsset.ToString());
+        if(particleRef.RuntimeKeyIsValid())
+        {
+            var loadRequest = particleRef.InstantiateAsync();
+            Entity requester = entityManager.CreateEntity();
+            entityManager.AddComponentData(requester, new AsyncRequestWorld
+            {
+                CentrePoint = CentrePoint,
+                GridSize = GridSize,
+                MaxParticles = MaxParticles,
+                worldParticleDetails = particleDetails,
+                particleGO = loadRequest
+            });
+        }
+
+        return particleDetails;
+    }
+
     public void GenerateLifeSeed()
     {
         var lifeStart = GeneratePatternStamps(NumberOfStartingSeeds, GridSize, new int2[][]
@@ -59,31 +81,17 @@ public class WorldSetup
                 lastUpdateTime = this.WorldUpdateRate
             };
 
-            // Load and setup the particle system for this world/grid
-            var particleSystemPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ParticleAsset.ToString());
-            var particleSystem = GameObject.Instantiate(particleSystemPrefab);
-            var vfxSystem = particleSystem.GetComponent<VisualEffect>();
-
-            // Generate the texture required to sort the position data in it
-            var positionData = new Texture2D(MaxParticles, 1, TextureFormat.RGFloat, false);          
-            vfxSystem.SetTexture("particlePositions", positionData);
-
-            // Setup some extents so that the system will simulate/render correctly
-            vfxSystem.SetVector3("Centre", CentrePoint);
-            var extents = new float3(GridSize.x / 2.0f, 5.0f, GridSize.y / 2.0f);
-            vfxSystem.SetVector3("Extent", extents);
+            // Kick off the loading/setup for the particle system for this world/grid
+            var particleDetails = SetupParticleSystem();
 
             var (shouldDieFunction, shouldComeToLifeFunction) = GameRules.GetRuleFunctions(RuleSet);
-
+                       
             var worldDetails = new WorldDetails()
             {
                 DeadRenderer = DeadCellPrefab,
                 AliveRenderer = AliveCellPrefab,
                 updateDetails = worldUpdateDetails,
-                particleSystem = particleSystem,
-                vfx = vfxSystem,
-                positionTexture = positionData,
-                maxParticles = MaxParticles,
+                particleDetails = particleDetails,
                 shouldDie = shouldDieFunction,
                 shouldComeToLifeDie = shouldComeToLifeFunction
             };

@@ -1,9 +1,7 @@
-﻿using Unity.Entities;
+﻿using LifeComponents;
+using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
-using Unity.Collections;
-
-using LifeComponents;
 
 namespace LifeUpdateSystem
 {

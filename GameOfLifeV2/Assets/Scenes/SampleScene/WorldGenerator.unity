@@ -162,8 +162,9 @@ MonoBehaviour:
   DeadCell: {fileID: 8900287776395129279, guid: 527009245a75b47baae5abdeb6f23d76,
     type: 3}
   SystemToUse: 1
-  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
-    type: 3}
+  particles:
+    m_AssetGUID: 2463efa99a2c2aa45a0766f34ef50be2
+    m_SubObjectName: 
   MaxParticles: 256
   RuleSet: 8
 --- !u!4 &10513276
@@ -221,8 +222,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 1
-  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
-    type: 3}
+  particles:
+    m_AssetGUID: 2463efa99a2c2aa45a0766f34ef50be2
+    m_SubObjectName: 
   MaxParticles: 256
   RuleSet: 0
 --- !u!4 &279589194
@@ -280,8 +282,9 @@ MonoBehaviour:
   DeadCell: {fileID: 8900287776395129279, guid: 527009245a75b47baae5abdeb6f23d76,
     type: 3}
   SystemToUse: 1
-  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
-    type: 3}
+  particles:
+    m_AssetGUID: 2463efa99a2c2aa45a0766f34ef50be2
+    m_SubObjectName: 
   MaxParticles: 256
   RuleSet: 0
 --- !u!4 &321224046
@@ -339,8 +342,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 0
-  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
-    type: 3}
+  particles:
+    m_AssetGUID: 
+    m_SubObjectName: 
   MaxParticles: 256
   RuleSet: 0
 --- !u!4 &1370529715
@@ -398,8 +402,9 @@ MonoBehaviour:
   DeadCell: {fileID: 6676886036446679967, guid: f2db9cedd2cb94002bbd7b797b89dc77,
     type: 3}
   SystemToUse: 0
-  particles: {fileID: 7833479251546421605, guid: 2463efa99a2c2aa45a0766f34ef50be2,
-    type: 3}
+  particles:
+    m_AssetGUID: 
+    m_SubObjectName: 
   MaxParticles: 256
   RuleSet: 8
 --- !u!4 &1484661167
