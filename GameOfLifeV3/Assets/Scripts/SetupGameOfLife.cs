@@ -28,7 +28,8 @@ public struct GameOfLifeConfig : IComponentData
 public enum UpdateSystem
 {
     SingleThreaded,
-    MultiThreaded
+    MultiThreaded,
+    Animated
 }
 
 [ConverterVersion(userName: "robj", version: 3)]
@@ -39,11 +40,12 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public uint WorldSeed = 1851936439U;
     public float WorldUpdateRate = 0.1f;
     public bool LimitUpdateRate = false;
+    public UpdateSystem SystemToUse;
     public GameObject AliveCell;
     public GameObject DeadCell;
-    public UpdateSystem SystemToUse;
     public AssetReference particles;
     public int MaxParticles;
+
     public GameRules.RuleSet RuleSet;
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
