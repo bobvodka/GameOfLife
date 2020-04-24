@@ -43,41 +43,26 @@ namespace LifeComponents
         public GameObject particleSystem;
         public Texture2D positionTexture;
         public int MaxParticles;
-        public bool Equals(ParticleSystemWrapper other)
-        {
-            return other.particleSystem.Equals(particleSystem) 
+        public bool Equals(ParticleSystemWrapper other) => other.particleSystem.Equals(particleSystem) 
                 && other.positionTexture.Equals(positionTexture)
                 && other.MaxParticles == MaxParticles;
-        }
-
-        public new int GetHashCode()
-        {
-            return particleSystem.GetHashCode() + positionTexture.GetHashCode() + MaxParticles;
-        }
+        
+        public new int GetHashCode() => particleSystem.GetHashCode() + positionTexture.GetHashCode() + MaxParticles;
+        
     }
 
     public struct WorldDetails : ISharedComponentData, IEquatable<WorldDetails>
     {
-        public Entity AliveRenderer;
-        public Entity DeadRenderer;
         public WorldUpdateDetails updateDetails;
         public WorldParticleDetails particleDetails;
         public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldDie;
         public FunctionPointer<GameOfLife.GameRules.LifeFunction> shouldComeToLifeDie;
 
-        public bool Equals(WorldDetails other)
-        {
-            return AliveRenderer == other.AliveRenderer
-                && DeadRenderer == other.DeadRenderer
-                && updateDetails == other.updateDetails;
-        }
-
-        public new int GetHashCode()
-        {
-            return AliveRenderer.GetHashCode()
-                + DeadRenderer.GetHashCode()
+        public bool Equals(WorldDetails other) => updateDetails == other.updateDetails
+                && particleDetails == other.particleDetails;
+        
+        public new int GetHashCode() => particleDetails.GetHashCode()
                 + updateDetails.GetHashCode();
-        }
     }
 
     public class WorldUpdateDetails
@@ -95,8 +80,34 @@ namespace LifeComponents
         public int maxParticles;
     }
 
+    public struct SwapRenderer : ISharedComponentData, IEquatable<SwapRenderer>
+    {
+        public Entity AliveRenderer;
+        public Entity DeadRenderer;
+
+        public bool Equals(SwapRenderer other) => AliveRenderer == other.AliveRenderer && DeadRenderer == other.DeadRenderer;
+
+        public new int GetHashCode() => AliveRenderer.GetHashCode() + DeadRenderer.GetHashCode();
+        
+    }
+
+    public struct AnimatedRenderer : ISharedComponentData, IEquatable<AnimatedRenderer>
+    {
+        public float4 AliveColour;
+        public float4 DeadColour;
+
+        bool CompareFloat4(float4 lhs, float4 rhs) => lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+        
+
+        public bool Equals(AnimatedRenderer other) => CompareFloat4(AliveColour, other.AliveColour)
+            && CompareFloat4(DeadColour, other.DeadColour);
+
+        public new int GetHashCode() =>  AliveColour.GetHashCode() + DeadColour.GetHashCode();
+    }
+
     public struct SingleThreadUpdateTag : IComponentData { };
     public struct MultiThreadUpdateTag : IComponentData { };
+    public struct AnimatedUpdateTag : IComponentData { };
 
     public struct ShouldUpdateTag : IComponentData { };
     public struct WorldUpdateTracker : IComponentData { };

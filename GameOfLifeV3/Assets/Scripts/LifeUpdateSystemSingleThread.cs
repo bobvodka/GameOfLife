@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using LifeComponents;
 using Unity.Transforms;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LifeUpdateSystem
 {
@@ -24,7 +25,8 @@ namespace LifeUpdateSystem
                 typeof(WorldUpdateTracker),
                 typeof(ShouldUpdateTag),
                 typeof(SingleThreadUpdateTag),
-                typeof(WorldDetails)
+                typeof(WorldDetails),
+                typeof(SwapRenderer)
                 );
 
             commandBufferSystem = World.GetOrCreateSystem<CellStateUpdateCommandBufferSystem>();
@@ -37,14 +39,18 @@ namespace LifeUpdateSystem
             {
                 // Grab a list of all the unique WorldDetails shared components in the world
                 // this is used to find all the potential boards in the world to update
-                var sharedComponentData = new List<WorldDetails>();
-                EntityManager.GetAllUniqueSharedComponentData(sharedComponentData);
+                var worldDetailsComponentData = new List<WorldDetails>();
+                EntityManager.GetAllUniqueSharedComponentData(worldDetailsComponentData);
+                var rendererComponentData = new List<SwapRenderer>();
+                EntityManager.GetAllUniqueSharedComponentData(rendererComponentData);
 
-                foreach (var worldDetails in sharedComponentData)
+                var updateDetails = worldDetailsComponentData.Zip(rendererComponentData, (wd, rd) => (wd, rd));
+
+                foreach (var (worldDetails, renderDetails) in updateDetails)
                 {
                     // Set the filter on the query to match the current world
                     // and then see if any entity matches that query 
-                    updateFinder.SetSharedComponentFilter(worldDetails);
+                    updateFinder.SetSharedComponentFilter(worldDetails, renderDetails);
                     if (updateFinder.CalculateEntityCount() == 0)
                         continue;
 
@@ -87,7 +93,7 @@ namespace LifeUpdateSystem
 
                                 // Spawn a new renderable and link it to the cell on the board,
                                 // and clean up the old one
-                                var renderable = cmds.Instantiate(worldDetails.DeadRenderer);
+                                var renderable = cmds.Instantiate(renderDetails.DeadRenderer);
                                 cmds.AddComponent(renderable, new Parent { Value = entity });
                                 cmds.DestroyEntity(mesh.value);
                             }
@@ -102,7 +108,7 @@ namespace LifeUpdateSystem
 
                             // Spawn a new renderable and link it to the cell on the board,
                             // and clean up the old one
-                            var renderable = cmds.Instantiate(worldDetails.AliveRenderer);
+                            var renderable = cmds.Instantiate(renderDetails.AliveRenderer);
                             cmds.AddComponent(renderable, new Parent { Value = entity });
                             cmds.DestroyEntity(mesh.value);
                         }

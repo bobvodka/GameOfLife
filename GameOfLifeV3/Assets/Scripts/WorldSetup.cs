@@ -21,16 +21,15 @@ public class WorldSetup
     public int2 GridSize { get; set; }
     public UpdateSystem SystemToUse { get; set; }
 
-    /*
-    public UnityEngine.GameObject ParticleSystem { get; set; }
-
-    public UnityEngine.Texture2D PositionTexture { get; set; }
-    */
-
     public NativeString512 ParticleAsset { get; set; }
     public int MaxParticles { get; set; }
 
     public GameRules.RuleSet RuleSet { get; set; }
+
+    public float4 AliveColour { get; set; }
+    public float4 DeadColour { get; set; }
+    public Entity AnimatedCellPrefab { get; set; }
+
 
     struct StartPatternStamp
     {
@@ -88,13 +87,29 @@ public class WorldSetup
                        
             var worldDetails = new WorldDetails()
             {
-                DeadRenderer = DeadCellPrefab,
-                AliveRenderer = AliveCellPrefab,
                 updateDetails = worldUpdateDetails,
                 particleDetails = particleDetails,
                 shouldDie = shouldDieFunction,
                 shouldComeToLifeDie = shouldComeToLifeFunction
             };
+
+            var swapRenderer = (SystemToUse == UpdateSystem.SingleThreaded || SystemToUse == UpdateSystem.MultiThreaded)
+                ?  new SwapRenderer
+                {
+                    DeadRenderer = DeadCellPrefab,
+                    AliveRenderer = AliveCellPrefab,
+                }
+                : default;
+
+            var animatedRenderer = (SystemToUse == UpdateSystem.Animated)
+                ? new AnimatedRenderer
+                {
+                    //CellPrefab = AnimatedCellPrefab,
+                    AliveColour = AliveColour,
+                    DeadColour = DeadColour
+                }
+                : default;
+            
             
             entityManager.CreateEntity(cellArcheType, cells);
 
@@ -134,19 +149,39 @@ public class WorldSetup
                     entityManager.SetComponentData(cells[entityIdx], new Translation { Value = GetLocationAroundCentre(new float3(x, 0, y))});
 
                     // Setup which system will perform the update
-                    if (SystemToUse == UpdateSystem.SingleThreaded)
-                        entityManager.AddComponentData(cells[entityIdx], new SingleThreadUpdateTag());
-                    else
-                        entityManager.AddComponentData(cells[entityIdx], new MultiThreadUpdateTag());
+                    switch(SystemToUse)
+                    {
+                        case UpdateSystem.SingleThreaded:
+                            entityManager.AddComponentData(cells[entityIdx], new SingleThreadUpdateTag());
+                            break;
+                        case UpdateSystem.MultiThreaded:
+                            entityManager.AddComponentData(cells[entityIdx], new MultiThreadUpdateTag());
+                            break;
+                        case UpdateSystem.Animated:
+                            entityManager.AddComponentData(cells[entityIdx], new AnimatedUpdateTag());
+                            break;
+                    }
 
-                    // This instantiates a copy of the dead cell prefab and parents it to the cell we are processing
-                    var cellMesh = entityManager.Instantiate(DeadCellPrefab);
+                    Entity cellMesh = (SystemToUse == UpdateSystem.SingleThreaded || SystemToUse == UpdateSystem.MultiThreaded)
+                        ? entityManager.Instantiate(DeadCellPrefab) // This instantiates a copy of the dead cell prefab
+                        : entityManager.Instantiate(AnimatedCellPrefab);
+
+                    
+                    // The animated system needs some extra data for setting up rendering
+                    if (SystemToUse == UpdateSystem.Animated)
+                    {
+                        entityManager.AddComponentData(cellMesh, new ColourOverride { Value = DeadColour });
+                        entityManager.AddComponentData(cellMesh, new YOffsetOveride { Value = 0.0f });
+                    }
+
+                    // Parent the new mesh to the cell we are processing
                     entityManager.AddComponentData(cellMesh, new Parent { Value = cells[entityIdx] });
                     entityManager.AddComponentData(cellMesh, new LocalToParent());
                     // This lets us track which entity is our current renderable so we can swap it out later when we need
                     // to update our state of being
                     entityManager.SetComponentData(cells[entityIdx], new Renderable { value = cellMesh });
                     renderableEntitys[entityIdx] = cellMesh;
+
 
                     // As we can't hold an array of Entity references in a component the adjancy information is stored in a 
                     // buffer attached to the entity and populated by copying from the details we generated
@@ -156,6 +191,14 @@ public class WorldSetup
                     // And finally associate some shared data so that we can swap the prefabs around later
                     // and track the world update state
                     entityManager.AddSharedComponentData(cells[entityIdx], worldDetails);
+                    if((SystemToUse == UpdateSystem.SingleThreaded || SystemToUse == UpdateSystem.MultiThreaded))
+                    {
+                        entityManager.AddSharedComponentData(cells[entityIdx], swapRenderer);
+                    }
+                    else if (SystemToUse == UpdateSystem.Animated)
+                    {
+                        entityManager.AddSharedComponentData(cells[entityIdx], animatedRenderer);
+                    }
                 }
             }
 
@@ -172,6 +215,15 @@ public class WorldSetup
             else
                 entityManager.AddComponentData(worldUpdateTracker, new MultiThreadUpdateTag());
             entityManager.AddSharedComponentData(worldUpdateTracker, worldDetails);
+
+            if ((SystemToUse == UpdateSystem.SingleThreaded || SystemToUse == UpdateSystem.MultiThreaded))
+            {
+                entityManager.AddSharedComponentData(worldUpdateTracker, swapRenderer);
+            }
+            else if (SystemToUse == UpdateSystem.Animated)
+            {
+                entityManager.AddSharedComponentData(worldUpdateTracker, animatedRenderer);
+            }
         }
     }
 
@@ -229,19 +281,30 @@ public class WorldSetup
                     int entityIndex = ConvertToEntityIndex(location, gridSize);
                     // This the logic that makes the cells 'alive' by simply adding a tag component
                     entityManager.AddComponent(entities[entityIndex], typeof(AliveCell));
-                    // The location is adjusted slightly because it looks nicer
-                    entityManager.SetComponentData(entities[entityIndex], new Translation { Value = GetLocationAroundCentre(new float3(location.x, 1, location.y)) });
-                    // And we instatiate an instance of the alive cell prefab and set its parent to the cell we are processing
-                    var cellMesh = entityManager.Instantiate(AliveCellPrefab);
-                    entityManager.AddComponentData(cellMesh, new Parent { Value = entities[entityIndex] });
-                    entityManager.AddComponentData(cellMesh, new LocalToParent());
-                    entityManager.SetComponentData(entities[entityIndex], new Renderable { value = cellMesh });
+                    
+                    // And we either instatiate an instance of the alive cell prefab, set its parent to the cell we are processing as before...
+                    if (SystemToUse == UpdateSystem.SingleThreaded || SystemToUse == UpdateSystem.MultiThreaded)
+                    {
+                        // The location is adjusted slightly because it looks nicer
+                        entityManager.SetComponentData(entities[entityIndex], new Translation { Value = GetLocationAroundCentre(new float3(location.x, 1, location.y)) });
 
-                    // Clean up the one we added initially
-                    entityManager.DestroyEntity(renderables[entityIndex]);
-                    // and replce the entry incase we hit this cell again
-                    // otherwise we end up with more than 1 child on a cell
-                    renderables[entityIndex] = cellMesh;
+                        var cellMesh = entityManager.Instantiate(AliveCellPrefab);
+                        entityManager.AddComponentData(cellMesh, new Parent { Value = entities[entityIndex] });
+                        entityManager.AddComponentData(cellMesh, new LocalToParent());
+                        entityManager.SetComponentData(entities[entityIndex], new Renderable { value = cellMesh });
+
+                        // Clean up the one we added initially
+                        entityManager.DestroyEntity(renderables[entityIndex]);
+                        // and replce the entry incase we hit this cell again
+                        // otherwise we end up with more than 1 child on a cell
+                        renderables[entityIndex] = cellMesh;
+                    }
+                    // ... or, in the case of the animated updater, just poke some data so that it matches state
+                    else if (SystemToUse == UpdateSystem.Animated)
+                    {
+                        entityManager.SetComponentData(renderables[entityIndex], new YOffsetOveride { Value = 1.0f });
+                        entityManager.SetComponentData(renderables[entityIndex], new ColourOverride { Value = AliveColour }); 
+                    }
                 }
             }
         }

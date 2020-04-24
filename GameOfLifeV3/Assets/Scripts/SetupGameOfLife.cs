@@ -23,6 +23,10 @@ public struct GameOfLifeConfig : IComponentData
     public NativeString512 particleAsset;
     public int MaxParticles;
     public GameRules.RuleSet ruleSet;
+
+    public float4 DeadColour;
+    public float4 AliveColour;
+    public Entity AnimatedCell;
 }
 
 public enum UpdateSystem
@@ -32,7 +36,7 @@ public enum UpdateSystem
     Animated
 }
 
-[ConverterVersion(userName: "robj", version: 3)]
+[ConverterVersion(userName: "robj", version: 6)]
 public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConvertGameObjectToEntity
 {
     public int NumberOfStartingSeeds = 12;
@@ -47,6 +51,10 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     public int MaxParticles;
 
     public GameRules.RuleSet RuleSet;
+
+    public Color deadColour;
+    public Color aliveColor;
+    public GameObject AnimatedCell;
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
@@ -68,7 +76,10 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
             SystemToUse = this.SystemToUse,
             particleAsset = new NativeString512(assetLocation),
             MaxParticles = MaxParticles,
-            ruleSet = RuleSet
+            ruleSet = RuleSet,
+            DeadColour = new float4(deadColour.r, deadColour.g, deadColour.b, deadColour.a),
+            AliveColour = new float4(aliveColor.r, aliveColor.g, aliveColor.b, aliveColor.a),
+            AnimatedCell = conversionSystem.GetPrimaryEntity(this.AnimatedCell)
         };
 
         dstManager.AddComponentData(entity, data);
@@ -78,6 +89,7 @@ public class SetupGameOfLife : MonoBehaviour, IDeclareReferencedPrefabs, IConver
     {
         referencedPrefabs.Add(AliveCell);
         referencedPrefabs.Add(DeadCell);
+        referencedPrefabs.Add(AnimatedCell);
     }
 }
 
@@ -119,7 +131,10 @@ public class LifeConfigSystem : SystemBase
                 SystemToUse = config.SystemToUse,
                 ParticleAsset = config.particleAsset,
                 MaxParticles = config.MaxParticles,
-                RuleSet = config.ruleSet
+                RuleSet = config.ruleSet,
+                AnimatedCellPrefab = config.AnimatedCell,
+                AliveColour = config.AliveColour,
+                DeadColour = config.DeadColour
             };
 
             worldSetupSystem.GenerateLifeSeed();
