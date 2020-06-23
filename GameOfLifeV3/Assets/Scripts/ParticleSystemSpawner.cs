@@ -37,7 +37,7 @@ namespace LifeUpdateSystem
 
             // Do a sweap over all the entities and extract an entity which matches the "world" they are in
             // and also convert their locations to a 2D position on the grid
-            var sharedEntityDetails = new NativeArray<Entity>(entityCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            var sharedEntityDetails = new NativeArray<int>(entityCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             var entityLocations = new NativeArray<float2>(entityCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
             var groupEntitiesJob = Entities
@@ -45,7 +45,7 @@ namespace LifeUpdateSystem
                 .WithName("GrabParticleSpawnInfo")
                 .ForEach((in int entityInQueryIndex, in NewLife lifeDetails, in Translation location) =>
                 {
-                    sharedEntityDetails[entityInQueryIndex] = lifeDetails.worldEntity;
+                    sharedEntityDetails[entityInQueryIndex] = lifeDetails.worldEntity.Index;
                     entityLocations[entityInQueryIndex] = new float2(location.Value.x, location.Value.z);
 
                 }).ScheduleParallel(Dependency);
@@ -53,7 +53,7 @@ namespace LifeUpdateSystem
             // Next we schedule a job to process the sharedEntityDetails, i.e. the entity which indicates which world
             // a particle is spawning in.
             // This results in some structures which will let us index data in groups which is important later.
-            var groupedEntities = new NativeArraySharedValues<Entity>(sharedEntityDetails, Allocator.TempJob);
+            var groupedEntities = new NativeArraySharedInt(sharedEntityDetails, Allocator.TempJob);
             var sortEntities = groupedEntities.Schedule(groupEntitiesJob);
 
             // Sync point to ensure all the above has completed

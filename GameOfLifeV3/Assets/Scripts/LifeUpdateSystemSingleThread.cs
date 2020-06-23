@@ -56,6 +56,10 @@ namespace LifeUpdateSystem
 
                     var aliveCells = GetComponentDataFromEntity<AliveCell>(isReadOnly: true);
 
+                    // Cache the functions to perform the alive/dead checks
+                    var shouldComeToLife = worldDetails.shouldComeToLifeDie;
+                    var shouldDie = worldDetails.shouldDie;
+
                     // The following code will be executed on the main thread
                     // so doesn't need to sync anything or return JobHandles for anyone
                     // else to sync on
@@ -83,7 +87,7 @@ namespace LifeUpdateSystem
                         // use Burst to improve the performance here
                         if (aliveCells.Exists(entity))
                         {
-                            if (worldDetails.shouldDie.Invoke(aliveCount))
+                            if (shouldDie.Invoke(aliveCount))
                             {
                                 // Components still can't be removed while iterating, however for this system we can use the
                                 // command buffer we created earlier which will be executed once this system has got done running.
@@ -98,7 +102,7 @@ namespace LifeUpdateSystem
                                 cmds.DestroyEntity(mesh.value);
                             }
                         }
-                        else if (worldDetails.shouldComeToLifeDie.Invoke(aliveCount))
+                        else if (shouldComeToLife.Invoke(aliveCount))
                         {
                             // Add the alive tag
                             cmds.AddComponent(entity, new AliveCell { });
